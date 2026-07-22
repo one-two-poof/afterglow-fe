@@ -1,0 +1,19 @@
+{
+  "name": "@afterglow/api",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@afterglow/types": "workspace:*",
+    "axios": "^1.18.1"
+  },
+  "devDependencies": {
+    "@afterglow/typescript-config": "workspace:*",
+    "typescript": "^5.9.3"
+  }
+}
