@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   transpilePackages: [
-    "@afterglow/design-system",
+    "@afterglow/ui",
     "@afterglow/api",
     "@afterglow/types",
     "@afterglow/utils",

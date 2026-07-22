@@ -13,7 +13,8 @@
 ## 영향 범위
 - [ ] `apps/web`
 - [ ] `apps/admin`
-- [ ] `packages/design-system`
+- [ ] `packages/ui`
+- [ ] `packages/tokens`
 - [ ] `packages/api`
 - [ ] `packages/types`
 - [ ] `packages/utils`

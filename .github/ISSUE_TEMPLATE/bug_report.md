@@ -24,7 +24,8 @@ assignees: []
 <!-- 해당되는 곳에 [x] -->
 - [ ] `apps/web`
 - [ ] `apps/admin`
-- [ ] `packages/design-system`
+- [ ] `packages/ui`
+- [ ] `packages/tokens`
 - [ ] `packages/api`
 - [ ] `packages/types`
 - [ ] `packages/utils`
