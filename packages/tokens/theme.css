@@ -9,6 +9,7 @@
   --color-primary-700: #00689a;
   --color-primary-800: #004c73;
   --color-primary-900: #00354b;
+  --color-primary: var(--color-primary-300);
 
   --color-secondary-50: #edf3fa;
   --color-secondary-100: #dce4ef;
@@ -16,6 +17,7 @@
   --color-secondary-500: #4b607d;
   --color-secondary-700: #2f4054;
   --color-secondary-900: #1c2b45;
+  --color-secondary: var(--color-secondary-500);
 
   --color-neutral-0: #ffffff;
   --color-neutral-50: #f7f8f8;
@@ -28,6 +30,7 @@
   --color-neutral-700: #3f4b58;
   --color-neutral-800: #2b323b;
   --color-neutral-900: #171c21;
+  --color-neutral: var(--color-neutral-500);
 
   --color-error-50: #fff1f1;
   --color-error-500: #e53935;
