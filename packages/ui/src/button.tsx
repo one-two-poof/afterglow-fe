@@ -1,3 +1,5 @@
+"use client";
+
 import { cn } from "@afterglow/utils";
 import { ReactNode, ElementType, ComponentPropsWithRef } from "react";
 
@@ -5,12 +7,12 @@ type Size = "sm" | "md" | "lg";
 type Variant = "primary" | "secondary" | "ghost";
 
 const BUTTON_BASE_STYLE =
-  "flex items-center justify-center disabled:bg-action-disabled disabled:text-on-action-disabled";
+  "flex items-center justify-center disabled:bg-action-disabled disabled:text-on-action-disabled cursor-pointer";
 
 const BUTTON_SIZE: Record<Size, string> = {
-  sm: "w-[80px] h-[30px] text-label-lg",
+  sm: "w-[80px] h-[30px] text-label-sm",
   md: "w-[100px] h-[35px] text-label-md",
-  lg: "w-[320px] h-[48px] text-label-sm",
+  lg: "w-[320px] h-[48px] text-label-lg",
 };
 
 const STYLE_BY_VARIANT: Record<Variant, string> = {
