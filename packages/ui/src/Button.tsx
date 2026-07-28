@@ -1,30 +1,58 @@
+"use client";
+
 import { cn } from "@afterglow/utils";
-import { HTMLAttributes, ReactNode } from "react";
+import { ReactNode, ElementType, ComponentPropsWithRef } from "react";
 
-type ButtonSize = "sm" | "md" | "lg";
+type Size = "sm" | "md" | "lg";
+type Variant = "primary" | "secondary" | "ghost";
 
-const BUTTON_BASE_STYLE = "";
+const BUTTON_BASE_STYLE =
+  "flex items-center justify-center disabled:bg-action-disabled disabled:text-on-action-disabled cursor-pointer";
 
-const BUTTON_SIZE: Record<ButtonSize, string> = {
-  sm: "flex",
-  md: "",
-  lg: "",
+const BUTTON_SIZE: Record<Size, string> = {
+  sm: "w-[80px] h-[30px] text-label-sm",
+  md: "w-[100px] h-[35px] text-label-md",
+  lg: "w-[320px] h-[48px] text-label-lg",
 };
 
-export interface ButtonProps extends HTMLAttributes<HTMLButtonElement> {
+const STYLE_BY_VARIANT: Record<Variant, string> = {
+  primary:
+    "bg-action-primary text-on-action-primary hover:bg-action-primary-hover rounded-[8px]",
+  secondary:
+    "bg-action-secondary text-on-action-secondary hover:bg-action-secondary-hover border border-action-secondary-border rounded-[8px]",
+  ghost: "bg-action-ghost text-on-action-ghost hover:bg-action-ghost-hover",
+};
+
+export interface ButtonOwnProps<T extends ElementType> {
+  as?: T;
+  variant: Variant;
+  size?: Size;
   children: ReactNode;
-  size?: ButtonSize;
 }
 
-export const Button = ({
+type ButtonProps<T extends ElementType> = ButtonOwnProps<T> &
+  Omit<ComponentPropsWithRef<T>, keyof ButtonOwnProps<T>>;
+
+export const Button = <T extends ElementType = "button">({
+  variant,
   children,
   size = "lg",
+  as,
   className,
   ...rest
-}: ButtonProps) => {
+}: ButtonProps<T>) => {
+  const Component = as || "button";
   return (
-    <button className={cn(BUTTON_SIZE[size], BUTTON_BASE_STYLE, className)}>
+    <Component
+      className={cn(
+        BUTTON_BASE_STYLE,
+        BUTTON_SIZE[size],
+        STYLE_BY_VARIANT[variant],
+        className,
+      )}
+      {...rest}
+    >
       {children}
-    </button>
+    </Component>
   );
 };
