@@ -1,5 +1,6 @@
 "use client";
-import { Button } from "@afterglow/ui";
+import { Button, Logo } from "@afterglow/ui";
+import Link from "next/link";
 
 const UiComponents = () => {
   return (
@@ -38,6 +39,12 @@ const UiComponents = () => {
         <Button variant="ghost" size="sm">
           로그인
         </Button>
+      </div>
+
+      <div>
+        <Link href="/">
+          <Logo />
+        </Link>
       </div>
     </div>
   );
