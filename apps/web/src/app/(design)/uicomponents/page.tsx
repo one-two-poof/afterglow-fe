@@ -1,5 +1,5 @@
 "use client";
-import { Button, Logo } from "@afterglow/ui";
+import { Badge, Button, Logo } from "@afterglow/ui";
 import Link from "next/link";
 
 const UiComponents = () => {
@@ -45,6 +45,12 @@ const UiComponents = () => {
         <Link href="/">
           <Logo />
         </Link>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <Badge size="lg">Day 1</Badge>
+        <Badge size="md">Day 2</Badge>
+        <Badge size="sm">Day 3</Badge>
       </div>
     </div>
   );
