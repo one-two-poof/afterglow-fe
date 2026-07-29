@@ -31,9 +31,11 @@ const Header = () => {
   }, [open]);
 
   return (
-    <header className="mx-auto flex max-w-[1240px] items-center justify-between px-4 py-4 md:px-10">
+    <header className="mx-auto flex w-full max-w-[1240px] items-center justify-between px-4 py-4 md:px-10">
       <div className="flex items-center gap-[50px]">
-        <Logo />
+        <Link href="/">
+          <Logo />
+        </Link>
         <nav className="hidden md:block">
           <ul className="flex gap-8">
             {NAV_ITEMS.map((item) => (
