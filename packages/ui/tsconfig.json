@@ -1,5 +1,5 @@
 {
   "extends": "@afterglow/typescript-config/nextjs.json",
-  "include": ["src"],
+  "include": ["src", "jest.setup.ts"],
   "exclude": ["node_modules"]
 }
