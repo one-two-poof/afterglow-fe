@@ -1,5 +1,5 @@
 "use client";
-import { Badge, Button, Logo, Modal } from "@afterglow/ui";
+import { Badge, Button, Input, Logo, Modal } from "@afterglow/ui";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -81,6 +81,25 @@ const UiComponents = () => {
             </Modal.Close>
           </Modal.Footer>
         </Modal>
+      </div>
+
+      <div className="flex w-[280px] flex-col gap-4">
+        <Input label="이메일" type="email" placeholder="you@example.com" />
+        <Input
+          label="비밀번호"
+          type="password"
+          placeholder="••••••••"
+          helperText="8자 이상 입력하세요"
+        />
+        <Input
+          label="에러 상태"
+          defaultValue="wrong@"
+          error="올바른 이메일 형식이 아닙니다"
+        />
+        <Input label="비활성화" placeholder="disabled" disabled />
+
+        <Input size="md" placeholder="size md" />
+        <Input size="sm" placeholder="size sm" />
       </div>
     </div>
   );
