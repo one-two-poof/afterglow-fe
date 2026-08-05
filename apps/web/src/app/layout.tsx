@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import LoginModal from "@/components/LoginModal";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -15,7 +16,10 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body>
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <LoginModal />
+        </Providers>
       </body>
     </html>
   );
