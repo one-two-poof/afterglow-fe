@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuthModalStore } from "@/stores/auth-modal-store";
-import { Button, Modal } from "@afterglow/ui";
+import { Button, Logo, Modal } from "@afterglow/ui";
 
 const LoginModal = () => {
   const isOpen = useAuthModalStore((state) => state.isOpen);
@@ -13,9 +13,9 @@ const LoginModal = () => {
 
   return (
     <Modal open={isOpen} onClose={close} className="w-[360px]">
-      <Modal.Header>
-        로그인
-        <Modal.Close />
+      <Modal.Header className="justify-center gap-1">
+        <Logo />
+        <span>Afterglow</span>
       </Modal.Header>
 
       <Modal.Body>
