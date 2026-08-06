@@ -8,7 +8,7 @@ import { usePathname } from "next/navigation";
 const MENUS = [
   { title: "홈", url: "/", icon: <Home /> },
   { title: "내 코스", url: "/my-course", icon: <LineSquiggle /> },
-  { title: "내 정보", url: "/mypage", icon: <User /> },
+  { title: "내 정보", url: "/my-page", icon: <User /> },
 ];
 
 const Footer = () => {
