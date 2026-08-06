@@ -8,7 +8,18 @@ const LoginModal = () => {
   const close = useAuthModalStore((state) => state.close);
 
   const handleGoogleLogin = () => {
-    // TODO: Google OAuth 연동 — 백엔드 인증 엔드포인트로 리다이렉트/팝업 처리
+    const authUrl = new URL(
+      "api/auth/login/google",
+      process.env.NEXT_PUBLIC_API_URL,
+    );
+
+    // 로그인 후 복귀할 현재 위치를 저장 — 같은 탭·오리진이라 콜백에서 그대로 꺼낼 수 있음
+    sessionStorage.setItem(
+      "returnTo",
+      window.location.pathname + window.location.search,
+    );
+
+    window.location.href = authUrl.toString();
   };
 
   return (
