@@ -1,9 +1,9 @@
 "use client";
 
+import { useAuthModalStore } from "@/stores/auth-modal-store";
 import { Logo } from "@afterglow/ui";
 import { cn } from "@afterglow/utils";
-import { Globe, Menu, X } from "lucide-react";
-import Image from "next/image";
+import { Globe, LogInIcon, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -17,6 +17,7 @@ const NAV_ITEMS = [
 const Header = () => {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const openAuthModal = useAuthModalStore((state) => state.open);
 
   useEffect(() => {
     if (!open) return;
@@ -57,8 +58,12 @@ const Header = () => {
 
       <div className="flex items-center gap-5">
         <Globe width={32} height={32} />
-        {/* TODO: 사진 기능 가능여부에 따른 변경 및 로그인 여부에따른 조건부 처리*/}
-        <Image alt="프로필 아바타" src="/Avatar.png" width={32} height={32} />
+        {/* TODO: 로그인 이후 조건부 처리*/}
+        <LogInIcon
+          type="button"
+          onClick={openAuthModal}
+          className="cursor-pointer"
+        />
         <button
           type="button"
           className="md:hidden"
