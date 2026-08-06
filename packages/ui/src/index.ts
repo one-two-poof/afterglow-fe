@@ -1,4 +1,4 @@
-export * from "./Badge";
+export * from "./StatusBadge";
 export * from "./Button";
 export * from "./Input";
 export * from "./Logo";

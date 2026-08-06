@@ -1,5 +1,5 @@
 "use client";
-import { Badge, Button, Input, Logo, Modal } from "@afterglow/ui";
+import { StatusBadge, Button, Input, Logo, Modal } from "@afterglow/ui";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -51,9 +51,11 @@ const UiComponents = () => {
       </div>
 
       <div className="flex flex-col gap-4">
-        <Badge size="lg">Day 1</Badge>
-        <Badge size="md">Day 2</Badge>
-        <Badge size="sm">Day 3</Badge>
+        <StatusBadge current={1} max={4} />
+        <StatusBadge current={2} max={4} />
+        <StatusBadge current={3} max={4} />
+        <StatusBadge current={4} max={4} />
+        <StatusBadge current={5} max={4} />
       </div>
 
       <div className="flex flex-col gap-4">
