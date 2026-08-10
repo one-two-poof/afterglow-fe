@@ -1,7 +1,8 @@
 "use client";
 
 import NaverMap from "@/components/NaverMap";
-import { TagList } from "@afterglow/ui";
+import { Input, TagList } from "@afterglow/ui";
+import { Search, X } from "lucide-react";
 import { useState } from "react";
 
 // TODO: 데이터 불러올 시 변경
@@ -32,10 +33,19 @@ const TAGITEMS = [
 export default function Home() {
   // TODO: 데이터 불러올 시. 변경
   const [filter, setFilter] = useState("all");
+  // TODO: 추후 검색 구현 시 Input value x 구현
 
   return (
     <div className="relative h-full">
       <NaverMap />
+      <Input
+        className="absolute top-4 left-1/2 w-[95%] -translate-x-1/2"
+        placeholder="병원 또는 관광지를 검색해보세요"
+        leftIcon={<Search size={18} />}
+        rightIcon={<X size={18} />}
+        size="md"
+      />
+
       <TagList
         value={filter}
         onChange={setFilter}

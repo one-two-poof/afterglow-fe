@@ -115,16 +115,13 @@ const UiComponents = () => {
         <Input size="sm" placeholder="size sm" />
       </div>
 
-      {/* Input — 좌우 아이콘 */}
       <div className="flex w-[280px] flex-col gap-4">
-        {/* 왼쪽 아이콘 (검색) */}
         <Input
           label="검색"
           placeholder="병원 검색"
           leftIcon={<Search size={18} />}
         />
 
-        {/* 오른쪽 아이콘 — clear 버튼 (클릭 가능) */}
         <Input
           label="값 지우기"
           placeholder="입력해 보세요"

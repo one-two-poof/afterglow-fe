@@ -27,6 +27,7 @@ interface InputProps extends Omit<ComponentPropsWithRef<"input">, "size"> {
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
   className?: string;
+  fieldClassName?: string;
   inputClassName?: string;
 }
 
@@ -39,6 +40,7 @@ export const Input = ({
   rightIcon,
   id,
   className,
+  fieldClassName,
   inputClassName,
   disabled,
   ...rest
@@ -50,7 +52,7 @@ export const Input = ({
   const descriptionId = description ? `${inputId}-description` : undefined;
 
   return (
-    <div className="flex w-full flex-col gap-1">
+    <div className={cn("flex flex-col gap-1", className)}>
       {label && (
         <label htmlFor={inputId} className="text-label-sm text-text">
           {label}
@@ -63,7 +65,7 @@ export const Input = ({
           FIELD_SIZE[size],
           hasError && "border-border-error focus-within:border-border-error",
           disabled && "cursor-not-allowed bg-surface-muted text-text-disabled",
-          className,
+          fieldClassName,
         )}
       >
         {leftIcon && (
@@ -82,7 +84,7 @@ export const Input = ({
         />
 
         {rightIcon && (
-          <span className="flex shrink-0 items-center text-text-muted">
+          <span className="flex shrink-0 cursor-pointer items-center text-text-muted">
             {rightIcon}
           </span>
         )}
