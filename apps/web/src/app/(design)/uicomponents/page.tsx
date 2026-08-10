@@ -7,12 +7,15 @@ import {
   Modal,
   TagList,
 } from "@afterglow/ui";
+import { Eye, EyeOff, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
 const UiComponents = () => {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("all");
+  const [showPassword, setShowPassword] = useState(false);
+  const [keyword, setKeyword] = useState("");
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -110,6 +113,59 @@ const UiComponents = () => {
 
         <Input size="md" placeholder="size md" />
         <Input size="sm" placeholder="size sm" />
+      </div>
+
+      <div className="flex w-[280px] flex-col gap-4">
+        <Input
+          label="검색"
+          placeholder="병원 검색"
+          leftIcon={<Search size={18} />}
+        />
+
+        <Input
+          label="값 지우기"
+          placeholder="입력해 보세요"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          rightIcon={
+            keyword ? (
+              <button
+                type="button"
+                aria-label="입력 지우기"
+                onClick={() => setKeyword("")}
+                className="cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            ) : null
+          }
+        />
+
+        {/* 오른쪽 아이콘 — 비밀번호 표시 토글 */}
+        <Input
+          label="비밀번호"
+          type={showPassword ? "text" : "password"}
+          placeholder="••••••••"
+          rightIcon={
+            <button
+              type="button"
+              aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 표시"}
+              onClick={() => setShowPassword((v) => !v)}
+              className="cursor-pointer"
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          }
+        />
+
+        {/* 좌우 아이콘 동시 */}
+        <Input
+          label="좌우 아이콘"
+          placeholder="search + clear"
+          leftIcon={<Search size={18} />}
+          rightIcon={<X size={18} />}
+          size="md"
+        />
       </div>
 
       <div className="flex w-[360px] flex-col gap-4">

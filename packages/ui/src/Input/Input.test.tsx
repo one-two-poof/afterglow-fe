@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import { Input } from "./Input";
 
@@ -45,5 +46,43 @@ describe("Input", () => {
 
     expect(input).toHaveAttribute("type", "password");
     expect(input).toHaveAttribute("placeholder", "••••••••");
+  });
+
+  it("leftIcon과 rightIcon을 렌더한다", () => {
+    render(
+      <Input
+        label="검색"
+        leftIcon={<span data-testid="left-icon" />}
+        rightIcon={<span data-testid="right-icon" />}
+      />,
+    );
+
+    expect(screen.getByTestId("left-icon")).toBeInTheDocument();
+    expect(screen.getByTestId("right-icon")).toBeInTheDocument();
+  });
+
+  it("클릭 가능한 rightIcon(버튼)의 onClick이 동작한다", async () => {
+    const onClick = jest.fn();
+    render(
+      <Input
+        label="비밀번호"
+        type="password"
+        rightIcon={
+          <button type="button" aria-label="비밀번호 표시" onClick={onClick} />
+        }
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "비밀번호 표시" }));
+
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("label 클릭 시(focus-within) 아이콘이 있어도 input에 포커스가 간다", async () => {
+    render(<Input label="검색" leftIcon={<span data-testid="left-icon" />} />);
+
+    await userEvent.click(screen.getByText("검색"));
+
+    expect(screen.getByLabelText("검색")).toHaveFocus();
   });
 });
