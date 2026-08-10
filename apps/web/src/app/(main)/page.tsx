@@ -43,7 +43,7 @@ export default function Home() {
         placeholder="병원 또는 관광지를 검색해보세요"
         leftIcon={<Search size={18} />}
         rightIcon={<X size={18} />}
-        size="md"
+        size="lg"
       />
 
       <TagList
