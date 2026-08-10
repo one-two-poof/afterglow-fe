@@ -1,13 +1,21 @@
 "use client";
-import { StatusBadge, Button, Input, Logo, Modal } from "@afterglow/ui";
+import {
+  StatusBadge,
+  Button,
+  Input,
+  Logo,
+  Modal,
+  TagList,
+} from "@afterglow/ui";
 import Link from "next/link";
 import { useState } from "react";
 
 const UiComponents = () => {
   const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState("all");
 
   return (
-    <div className="flex gap-4 p-4">
+    <div className="flex flex-col gap-4 p-4">
       <div className="flex flex-col gap-4">
         <Button as="a" href="/test" variant="primary">
           로그인
@@ -102,6 +110,27 @@ const UiComponents = () => {
 
         <Input size="md" placeholder="size md" />
         <Input size="sm" placeholder="size sm" />
+      </div>
+
+      <div className="flex w-[360px] flex-col gap-4">
+        <TagList value={filter} onChange={setFilter} aria-label="카테고리 필터">
+          <TagList.Item value="all">전체</TagList.Item>
+          <TagList.Item value="clinic" icon="🏥">
+            추천병원
+          </TagList.Item>
+          <TagList.Item value="spot" icon="📍">
+            관광명소
+          </TagList.Item>
+          <TagList.Item value="course" icon="📍">
+            아이디 성형외과 코스
+          </TagList.Item>
+          <TagList.Item value="review" icon="⭐">
+            후기
+          </TagList.Item>
+          <TagList.Item value="event" icon="🎁" disabled>
+            이벤트(비활성)
+          </TagList.Item>
+        </TagList>
       </div>
     </div>
   );
