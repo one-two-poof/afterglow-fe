@@ -17,6 +17,7 @@ import { createPortal } from "react-dom";
 import { addDays, formatISODate, type DateRange } from "@/components/Calendar";
 
 import { PlaceStep, type Place } from "./PlaceStep";
+import { PurposeStep } from "./PurposeStep";
 import { ScheduleStep } from "./ScheduleStep";
 import { TreatmentDateStep } from "./TreatmentDateStep";
 import { TreatmentStep } from "./TreatmentStep";
@@ -50,9 +51,8 @@ const MOCK_PLACES: Place[] = [
   },
 ];
 
-// TODO: 목적/도보선호 전용 단계 UI 확정 시 사용자 입력으로 대체
+// TODO: 도보선호 전용 단계 UI 확정 시 사용자 입력으로 대체
 const DEFAULT_FORM = {
-  user_purpose: "휴식",
   user_walk_preference: 3,
 } as const;
 
@@ -66,6 +66,7 @@ const buildTripPlanPayload = (
   places: Place[],
   treatments: string[],
   treatmentDates: Record<string, string>,
+  userPurpose: string,
 ): TripPlanPayload | null => {
   const { start, end } = range;
   if (!start || !end) {
@@ -92,7 +93,7 @@ const buildTripPlanPayload = (
     treatment: treatments
       .filter((name) => treatmentDates[name])
       .map((name) => ({ name, date: treatmentDates[name]! })),
-    user_purpose: DEFAULT_FORM.user_purpose,
+    user_purpose: userPurpose,
     user_walk_preference: DEFAULT_FORM.user_walk_preference,
     daily_starts,
   };
@@ -126,6 +127,8 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
   const [treatmentDates, setTreatmentDates] = useState<Record<string, string>>(
     {},
   );
+  // 여행 주요 목적 (단일 선택)
+  const [purpose, setPurpose] = useState<string | null>(null);
   // 여행 일자별 선택 숙소 (인덱스 = n번째 날)
   const [placeIds, setPlaceIds] = useState<(string | null)[]>([]);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -137,6 +140,7 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
     setStep(0);
     setTreatments([]);
     setTreatmentDates({});
+    setPurpose(null);
     setPlaceIds([]);
     onClose();
   }, [onClose]);
@@ -239,6 +243,11 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
         />
       ),
     })),
+    {
+      title: "여행 주요 목적 선택",
+      canNext: Boolean(purpose),
+      content: <PurposeStep value={purpose} onChange={setPurpose} />,
+    },
   ];
 
   const current = steps[step]!;
@@ -265,6 +274,7 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
       MOCK_PLACES,
       treatments,
       treatmentDates,
+      purpose ?? "",
     );
     if (!payload) {
       return;
