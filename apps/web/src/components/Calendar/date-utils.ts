@@ -16,6 +16,17 @@ export const startOfMonth = (date: Date): Date =>
 export const addMonths = (date: Date, amount: number): Date =>
   new Date(date.getFullYear(), date.getMonth() + amount, 1);
 
+export const addDays = (date: Date, amount: number): Date =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate() + amount);
+
+/** 로컬 기준 "YYYY-MM-DD" 문자열 (타임존 영향 없음) */
+export const formatISODate = (date: Date): string => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
 export const isSameDay = (a: Date, b: Date): boolean =>
   a.getFullYear() === b.getFullYear() &&
   a.getMonth() === b.getMonth() &&
@@ -65,6 +76,7 @@ export const isInRange = (day: Date, range: DateRange): boolean => {
  *
  * 규칙: 시작일을 먼저 고르고, 시작일 포함 최대 `maxDays`개까지 선택 가능.
  * 예) maxDays=4 → 15일 선택 후 최대 18일까지(15·16·17·18).
+ * 시작일을 한 번 더 탭하면 당일(시작=종료) 선택으로 확정된다.
  * 범위 초과/이전 날짜를 탭하면 그 날짜가 새 시작점이 된다.
  */
 export const nextRange = (
@@ -78,7 +90,7 @@ export const nextRange = (
     return { start: day, end: null };
   }
   if (isSameDay(day, start)) {
-    return { start, end: null };
+    return { start, end: start };
   }
 
   const diff = diffInDays(start, day);

@@ -129,6 +129,8 @@ const DayCell = ({
   const isEnd = Boolean(range.end && isSameDay(day, range.end));
   const inMiddle = isInRange(day, range);
   const isEndpoint = isStart || isEnd;
+  // 당일 선택(시작=종료)은 연결 바 없이 원만 표시
+  const isSingle = isStart && isEnd;
   const weekday = day.getDay();
 
   const baseColor =
@@ -151,7 +153,7 @@ const DayCell = ({
         aria-pressed={isEndpoint || inMiddle}
         className="relative flex h-11 w-full items-center justify-center rounded-full focus-visible:ring-2 focus-visible:ring-border-focus focus-visible:outline-none"
       >
-        {hasRange && (inMiddle || isEndpoint) && (
+        {hasRange && !isSingle && (inMiddle || isEndpoint) && (
           <span
             className={cn(
               "absolute inset-y-1 bg-primary-100",

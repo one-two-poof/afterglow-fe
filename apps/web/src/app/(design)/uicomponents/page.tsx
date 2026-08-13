@@ -7,7 +7,12 @@ import {
   Modal,
   TagList,
 } from "@afterglow/ui";
-import { Calendar, TripSummaryCard, type DateRange } from "@/components";
+import {
+  Calendar,
+  PlaceCard,
+  TripSummaryCard,
+  type DateRange,
+} from "@/components";
 import { Eye, EyeOff, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -21,9 +26,27 @@ const UiComponents = () => {
     start: new Date(2026, 10, 15),
     end: new Date(2026, 10, 18),
   });
+  const [selectedPlace, setSelectedPlace] = useState("dormy");
 
   return (
     <div className="flex flex-col gap-4 p-4">
+      <div className="flex w-[400px] max-w-full flex-col gap-3">
+        <PlaceCard
+          category="피부과"
+          name="도미인 서울 강남"
+          address="서울 서초구 강남대로 415"
+          selected={selectedPlace === "dormy"}
+          onSelect={() => setSelectedPlace("dormy")}
+        />
+        <PlaceCard
+          category="피부과"
+          name="유앤아이 피부과 강남점"
+          address="서울 서초구 강남대로 415"
+          selected={selectedPlace === "uandi"}
+          onSelect={() => setSelectedPlace("uandi")}
+        />
+      </div>
+
       <div className="flex w-[400px] max-w-full flex-col gap-3 rounded-[24px] bg-bg p-3">
         <TripSummaryCard range={tripRange} />
         <Calendar

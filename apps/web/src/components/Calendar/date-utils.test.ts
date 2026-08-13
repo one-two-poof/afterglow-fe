@@ -37,6 +37,11 @@ describe("nextRange (시작일 포함 최대 4일 규칙)", () => {
     expect(nextRange(empty, d(15), 4)).toEqual({ start: d(15), end: null });
   });
 
+  it("시작일을 한 번 더 탭하면 당일(시작=종료) 선택이 된다", () => {
+    const started: DateRange = { start: d(15), end: null };
+    expect(nextRange(started, d(15), 4)).toEqual({ start: d(15), end: d(15) });
+  });
+
   it("시작일 포함 4일째(18일)까지는 종료일로 선택된다 (15·16·17·18)", () => {
     const started: DateRange = { start: d(15), end: null };
     expect(nextRange(started, d(18), 4)).toEqual({ start: d(15), end: d(18) });
