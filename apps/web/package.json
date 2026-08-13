@@ -20,7 +20,9 @@
     "@tanstack/react-query": "^5.101.4",
     "@tanstack/react-query-devtools": "^5.101.4",
     "lucide-react": "^1.27.0",
+    "maplibre-gl": "^5.24.0",
     "next": "^16.2.11",
+    "pmtiles": "^4.5.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "zustand": "^5.0.14"

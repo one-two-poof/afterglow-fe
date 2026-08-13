@@ -1,6 +1,6 @@
 "use client";
 
-import NaverMap from "@/components/NaverMap";
+import MapLibreMap from "@/components/MapLibreMap";
 import { Input, TagList } from "@afterglow/ui";
 import { Search, X } from "lucide-react";
 import { useState } from "react";
@@ -37,7 +37,7 @@ export default function Home() {
 
   return (
     <div className="relative h-full">
-      <NaverMap />
+      <MapLibreMap />
       <Input
         className="absolute top-4 left-1/2 w-[95%] -translate-x-1/2"
         placeholder="병원 또는 관광지를 검색해보세요"
