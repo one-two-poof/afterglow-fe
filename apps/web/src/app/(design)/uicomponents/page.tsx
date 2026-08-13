@@ -7,6 +7,11 @@ import {
   Modal,
   TagList,
 } from "@afterglow/ui";
+import {
+  Calendar,
+  TripSummaryCard,
+  type DateRange,
+} from "@/components/Calendar";
 import { Eye, EyeOff, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -16,9 +21,23 @@ const UiComponents = () => {
   const [filter, setFilter] = useState("all");
   const [showPassword, setShowPassword] = useState(false);
   const [keyword, setKeyword] = useState("");
+  const [tripRange, setTripRange] = useState<DateRange>({
+    start: new Date(2026, 10, 15),
+    end: new Date(2026, 10, 19),
+  });
 
   return (
     <div className="flex flex-col gap-4 p-4">
+      <div className="flex w-[400px] max-w-full flex-col gap-3 rounded-[24px] bg-bg p-3">
+        <TripSummaryCard range={tripRange} />
+        <Calendar
+          value={tripRange}
+          onChange={setTripRange}
+          startLabel="시작일"
+          defaultMonth={new Date(2026, 10, 1)}
+        />
+      </div>
+
       <div className="flex flex-col gap-4">
         <Button as="a" href="/test" variant="primary">
           로그인
