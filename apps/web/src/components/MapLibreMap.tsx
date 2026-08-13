@@ -25,9 +25,17 @@ const BUILDINGS_PMTILES_URL =
 // pmtiles 소스가 참조하는 vector layer id (pmtiles 메타데이터의 vector_layers[].id)
 const BUILDINGS_SOURCE_LAYER = "buildings";
 
-// 그림자 계산 기준 시각. TODO(③): 경로 요청의 at(이동 시각)으로 대체 예정.
-// 지금은 그림자가 확실히 보이는 데모용 오후 시각으로 고정.
-const SHADOW_DATE = new Date("2026-08-13T15:00:00+09:00");
+// 디자인 토큰(@afterglow/tokens의 theme.css CSS 변수)을 런타임에 실제 색 문자열로 해석.
+// MapLibre paint는 var(--...) 를 못 쓰므로 getComputedStyle로 값을 읽어 넘긴다.
+function readColorToken(name: string, fallback: string): string {
+  if (typeof document === "undefined") {
+    return fallback;
+  }
+  const value = getComputedStyle(document.documentElement)
+    .getPropertyValue(name)
+    .trim();
+  return value || fallback;
+}
 
 export default function MapLibreMap() {
   const mapEl = useRef<HTMLDivElement>(null);
@@ -64,13 +72,21 @@ export default function MapLibreMap() {
         data: { type: "FeatureCollection", features: [] },
       });
 
+      // 디자인 토큰 기반 색상 (기존 하드코딩 색과 가장 유사한 토큰으로 매핑)
+      const shadowColor = readColorToken("--color-secondary-900", "#1c2b45");
+      const buildingColor = readColorToken("--color-neutral-600", "#5f6b78");
+      const buildingOutlineColor = readColorToken(
+        "--color-neutral-700",
+        "#3f4b58",
+      );
+
       // 그림자 레이어를 먼저 추가 → 건물 레이어가 그 위에 그려짐(건물이 그림자 위)
       map.addLayer({
         id: "buildings-shadow",
         type: "fill",
         source: "shadows",
         paint: {
-          "fill-color": "#0f172a",
+          "fill-color": shadowColor,
           "fill-opacity": 0.35,
         },
       });
@@ -81,9 +97,9 @@ export default function MapLibreMap() {
         source: "buildings",
         "source-layer": BUILDINGS_SOURCE_LAYER,
         paint: {
-          "fill-color": "#6b7280",
+          "fill-color": buildingColor,
           "fill-opacity": 0.55,
-          "fill-outline-color": "#374151",
+          "fill-outline-color": buildingOutlineColor,
         },
       });
 
@@ -93,10 +109,12 @@ export default function MapLibreMap() {
           sourceLayer: BUILDINGS_SOURCE_LAYER,
         });
         const center = map.getCenter();
+        // 그림자는 항상 현재 시각의 태양 위치 기준으로 계산
+        // (경로 요청의 at은 사용하지 않음 — "지금 이 시간의 그늘"이 핵심)
         const data = buildShadows(
           features,
           { lat: center.lat, lng: center.lng },
-          SHADOW_DATE,
+          new Date(),
         );
         map.getSource<maplibregl.GeoJSONSource>("shadows")?.setData(data);
       };
