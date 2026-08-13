@@ -25,10 +25,6 @@ const BUILDINGS_PMTILES_URL =
 // pmtiles 소스가 참조하는 vector layer id (pmtiles 메타데이터의 vector_layers[].id)
 const BUILDINGS_SOURCE_LAYER = "buildings";
 
-// 그림자 계산 기준 시각. TODO(③): 경로 요청의 at(이동 시각)으로 대체 예정.
-// 지금은 그림자가 확실히 보이는 데모용 오후 시각으로 고정.
-const SHADOW_DATE = new Date("2026-08-13T15:00:00+09:00");
-
 export default function MapLibreMap() {
   const mapEl = useRef<HTMLDivElement>(null);
 
@@ -93,10 +89,12 @@ export default function MapLibreMap() {
           sourceLayer: BUILDINGS_SOURCE_LAYER,
         });
         const center = map.getCenter();
+        // 그림자는 항상 현재 시각의 태양 위치 기준으로 계산
+        // (경로 요청의 at은 사용하지 않음 — "지금 이 시간의 그늘"이 핵심)
         const data = buildShadows(
           features,
           { lat: center.lat, lng: center.lng },
-          SHADOW_DATE,
+          new Date(),
         );
         map.getSource<maplibregl.GeoJSONSource>("shadows")?.setData(data);
       };
