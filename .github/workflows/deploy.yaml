@@ -31,13 +31,13 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: pnpm build
+        run: pnpm turbo run build --filter=./apps/web
 
       - name: Package standalone output
         run: |
-          cp -r public .next/standalone/public
-          cp -r .next/static .next/standalone/.next/static
-          tar -czf frontend-build.tar.gz -C .next/standalone .
+          cp -r apps/web/public apps/web/.next/standalone/apps/web/public
+          cp -r apps/web/.next/static apps/web/.next/standalone/apps/web/.next/static
+          tar -czf frontend-build.tar.gz -C apps/web/.next/standalone .
 
       - name: Prepare SSH
         env:
