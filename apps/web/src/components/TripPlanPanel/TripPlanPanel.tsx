@@ -16,7 +16,32 @@ import { createPortal } from "react-dom";
 
 import { type DateRange } from "@/components/Calendar";
 
+import { PlaceStep, type Place } from "./PlaceStep";
 import { ScheduleStep } from "./ScheduleStep";
+
+const MS_PER_DAY = 86400000;
+
+/** 선택한 여행 기간의 일수(시작·종료일 포함). 미선택 시 0 */
+const getDayCount = ({ start, end }: DateRange) =>
+  start && end
+    ? Math.round((end.getTime() - start.getTime()) / MS_PER_DAY) + 1
+    : 0;
+
+// TODO: 실제 추천 숙소 API 연동 시 교체
+const MOCK_PLACES: Place[] = [
+  {
+    id: "dormy",
+    category: "숙소",
+    name: "도미인 서울 강남",
+    address: "서울 서초구 강남대로 415",
+  },
+  {
+    id: "uandi",
+    category: "숙소",
+    name: "유앤아이 호텔 강남점",
+    address: "서울 서초구 강남대로 421",
+  },
+];
 
 export interface TripPlanPanelProps {
   open: boolean;
@@ -40,6 +65,8 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
   const mounted = useIsMounted();
   const [step, setStep] = useState(0);
   const [range, setRange] = useState<DateRange>({ start: null, end: null });
+  // 여행 일자별 선택 숙소 (인덱스 = n번째 날)
+  const [placeIds, setPlaceIds] = useState<(string | null)[]>([]);
   const panelRef = useRef<HTMLDivElement>(null);
   const backRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
@@ -47,6 +74,7 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
   // 닫을 때 첫 단계로 초기화한 뒤 부모에 알림
   const handleClose = useCallback(() => {
     setStep(0);
+    setPlaceIds([]);
     onClose();
   }, [onClose]);
 
@@ -77,22 +105,33 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
     return null;
   }
 
-  // TODO: 이후 단계 확정 시 steps 확장 + 마지막 단계에서 폼 제출(API) 연결
+  // 여행 일수만큼 숙소 선택 단계를 동적으로 생성
+  const dayCount = getDayCount(range);
+  const selectPlace = (dayIndex: number, id: string) =>
+    setPlaceIds((prev) => {
+      const next = [...prev];
+      next[dayIndex] = id;
+      return next;
+    });
+
+  // TODO: 마지막 단계에서 폼 제출(API) 연결
   const steps = [
     {
       title: "여행 일정 선택",
       canNext: Boolean(range.start && range.end),
       content: <ScheduleStep value={range} onChange={setRange} />,
     },
-    {
-      title: "다음 단계",
-      canNext: true,
+    ...Array.from({ length: dayCount }, (_, i) => ({
+      title: `숙소 선택 (${i + 1}/${dayCount})`,
+      canNext: Boolean(placeIds[i]),
       content: (
-        <p className="p-5 text-body-md text-text-muted">
-          다음 단계는 준비 중입니다.
-        </p>
+        <PlaceStep
+          places={MOCK_PLACES}
+          selectedId={placeIds[i] ?? null}
+          onSelect={(id) => selectPlace(i, id)}
+        />
       ),
-    },
+    })),
   ];
 
   const current = steps[step]!;
