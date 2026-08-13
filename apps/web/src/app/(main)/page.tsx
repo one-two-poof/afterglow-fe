@@ -1,8 +1,8 @@
 "use client";
 
-import { MapLibreMap } from "@/components";
+import { MapLibreMap, TripPlanPanel } from "@/components";
 import { Input, TagList } from "@afterglow/ui";
-import { Search, X } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 import { useState } from "react";
 
 // TODO: 데이터 불러올 시 변경
@@ -34,6 +34,7 @@ export default function Home() {
   // TODO: 데이터 불러올 시. 변경
   const [filter, setFilter] = useState("all");
   // TODO: 추후 검색 구현 시 Input value x 구현
+  const [planOpen, setPlanOpen] = useState(false);
 
   return (
     <div className="relative h-full">
@@ -57,6 +58,17 @@ export default function Home() {
           </TagList.Item>
         ))}
       </TagList>
+
+      <button
+        type="button"
+        aria-label="여행 일정 만들기"
+        onClick={() => setPlanOpen(true)}
+        className="absolute right-5 bottom-28 z-10 flex size-14 items-center justify-center rounded-full bg-action-primary text-on-action-primary shadow-md hover:bg-action-primary-hover focus-visible:ring-2 focus-visible:ring-border-focus focus-visible:outline-none"
+      >
+        <Plus size={26} />
+      </button>
+
+      <TripPlanPanel open={planOpen} onClose={() => setPlanOpen(false)} />
     </div>
   );
 }
