@@ -5,5 +5,6 @@ export {
   formatDateWithWeekday,
   formatISODate,
   formatMonthTitle,
+  WEEKDAYS_KO,
   type DateRange,
 } from "./date-utils";

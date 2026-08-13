@@ -18,6 +18,8 @@ import { addDays, formatISODate, type DateRange } from "@/components/Calendar";
 
 import { PlaceStep, type Place } from "./PlaceStep";
 import { ScheduleStep } from "./ScheduleStep";
+import { TreatmentDateStep } from "./TreatmentDateStep";
+import { TreatmentStep } from "./TreatmentStep";
 import { type TripPlanPayload } from "./types";
 
 const MS_PER_DAY = 86400000;
@@ -48,9 +50,8 @@ const MOCK_PLACES: Place[] = [
   },
 ];
 
-// TODO: 시술/목적/도보선호 전용 단계 UI 확정 시 사용자 입력으로 대체
+// TODO: 목적/도보선호 전용 단계 UI 확정 시 사용자 입력으로 대체
 const DEFAULT_FORM = {
-  treatment: "리프팅",
   user_purpose: "휴식",
   user_walk_preference: 3,
 } as const;
@@ -63,6 +64,8 @@ const buildTripPlanPayload = (
   range: DateRange,
   placeIds: (string | null)[],
   places: Place[],
+  treatments: string[],
+  treatmentDates: Record<string, string>,
 ): TripPlanPayload | null => {
   const { start, end } = range;
   if (!start || !end) {
@@ -86,9 +89,9 @@ const buildTripPlanPayload = (
   return {
     trip_start_date: formatISODate(start),
     trip_end_date: formatISODate(end),
-    // TODO: 시술일 전용 선택 UI 확정 전까지 시작일로 대체
-    treatment_date: formatISODate(start),
-    treatment: DEFAULT_FORM.treatment,
+    treatment: treatments
+      .filter((name) => treatmentDates[name])
+      .map((name) => ({ name, date: treatmentDates[name]! })),
     user_purpose: DEFAULT_FORM.user_purpose,
     user_walk_preference: DEFAULT_FORM.user_walk_preference,
     daily_starts,
@@ -117,6 +120,12 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
   const mounted = useIsMounted();
   const [step, setStep] = useState(0);
   const [range, setRange] = useState<DateRange>({ start: null, end: null });
+  // 선택한 시술 종류(한글)
+  const [treatments, setTreatments] = useState<string[]>([]);
+  // 시술 → 날짜("YYYY-MM-DD") 매칭 (같은 날짜에 여러 시술 가능)
+  const [treatmentDates, setTreatmentDates] = useState<Record<string, string>>(
+    {},
+  );
   // 여행 일자별 선택 숙소 (인덱스 = n번째 날)
   const [placeIds, setPlaceIds] = useState<(string | null)[]>([]);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -126,6 +135,8 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
   // 닫을 때 첫 단계로 초기화한 뒤 부모에 알림
   const handleClose = useCallback(() => {
     setStep(0);
+    setTreatments([]);
+    setTreatmentDates({});
     setPlaceIds([]);
     onClose();
   }, [onClose]);
@@ -157,8 +168,31 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
     return null;
   }
 
-  // 여행 일수만큼 숙소 선택 단계를 동적으로 생성
+  // 여행 일수 및 일자 목록(시술 날짜 매칭 / 숙소 단계에서 사용)
   const dayCount = getDayCount(range);
+  const tripDays = range.start
+    ? Array.from({ length: dayCount }, (_, i) => addDays(range.start!, i))
+    : [];
+  const tripDayISO = tripDays.map(formatISODate);
+
+  const toggleTreatment = (name: string) => {
+    const isSelected = treatments.includes(name);
+    setTreatments((prev) =>
+      isSelected ? prev.filter((t) => t !== name) : [...prev, name],
+    );
+    // 해제 시 매칭된 날짜도 제거
+    if (isSelected) {
+      setTreatmentDates((prev) => {
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      });
+    }
+  };
+
+  const assignTreatmentDate = (name: string, date: string) =>
+    setTreatmentDates((prev) => ({ ...prev, [name]: date }));
+
   const selectPlace = (dayIndex: number, id: string) =>
     setPlaceIds((prev) => {
       const next = [...prev];
@@ -166,12 +200,33 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
       return next;
     });
 
-  // TODO: 마지막 단계에서 폼 제출(API) 연결
+  // 모든 선택 시술이 현재 여행 일자 내로 매칭되었는지
+  const allTreatmentsDated =
+    treatments.length > 0 &&
+    treatments.every((t) => tripDayISO.includes(treatmentDates[t] ?? ""));
+
   const steps = [
     {
       title: "여행 일정 선택",
       canNext: Boolean(range.start && range.end),
       content: <ScheduleStep value={range} onChange={setRange} />,
+    },
+    {
+      title: "시술 종류 선택",
+      canNext: treatments.length > 0,
+      content: <TreatmentStep selected={treatments} onToggle={toggleTreatment} />,
+    },
+    {
+      title: "시술 날짜 선택",
+      canNext: allTreatmentsDated,
+      content: (
+        <TreatmentDateStep
+          treatments={treatments}
+          days={tripDays}
+          value={treatmentDates}
+          onAssign={assignTreatmentDate}
+        />
+      ),
     },
     ...Array.from({ length: dayCount }, (_, i) => ({
       title: `숙소 선택 (${i + 1}/${dayCount})`,
@@ -204,7 +259,13 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
       return;
     }
     // 마지막 단계 → 제출 페이로드 조립
-    const payload = buildTripPlanPayload(range, placeIds, MOCK_PLACES);
+    const payload = buildTripPlanPayload(
+      range,
+      placeIds,
+      MOCK_PLACES,
+      treatments,
+      treatmentDates,
+    );
     if (!payload) {
       return;
     }
