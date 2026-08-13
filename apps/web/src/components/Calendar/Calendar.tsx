@@ -19,7 +19,8 @@ import {
 export interface CalendarProps {
   value: DateRange;
   onChange: (range: DateRange) => void;
-  maxDaysFromStart?: number;
+  /** 시작일 포함 최대 선택 가능 일수 (기본 4일: 15·16·17·18) */
+  maxDays?: number;
   startLabel?: string;
   defaultMonth?: Date;
   className?: string;
@@ -28,7 +29,7 @@ export interface CalendarProps {
 export const Calendar = ({
   value,
   onChange,
-  maxDaysFromStart = 4,
+  maxDays = 4,
   startLabel,
   defaultMonth,
   className,
@@ -91,9 +92,7 @@ export const Calendar = ({
                   range={value}
                   hasRange={hasRange}
                   startLabel={startLabel}
-                  onSelect={() =>
-                    onChange(nextRange(value, day, maxDaysFromStart))
-                  }
+                  onSelect={() => onChange(nextRange(value, day, maxDays))}
                 />
               ) : (
                 <div

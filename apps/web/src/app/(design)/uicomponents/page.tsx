@@ -19,7 +19,7 @@ const UiComponents = () => {
   const [keyword, setKeyword] = useState("");
   const [tripRange, setTripRange] = useState<DateRange>({
     start: new Date(2026, 10, 15),
-    end: new Date(2026, 10, 19),
+    end: new Date(2026, 10, 18),
   });
 
   return (

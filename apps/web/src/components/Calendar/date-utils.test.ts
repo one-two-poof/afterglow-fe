@@ -30,21 +30,21 @@ describe("getMonthMatrix (2026년 11월)", () => {
   });
 });
 
-describe("nextRange (최대 4일 규칙)", () => {
+describe("nextRange (시작일 포함 최대 4일 규칙)", () => {
   const empty: DateRange = { start: null, end: null };
 
   it("빈 상태에서 탭하면 시작일이 된다", () => {
     expect(nextRange(empty, d(15), 4)).toEqual({ start: d(15), end: null });
   });
 
-  it("시작일 + 4일 뒤까지는 종료일로 선택된다 (15→19)", () => {
+  it("시작일 포함 4일째(18일)까지는 종료일로 선택된다 (15·16·17·18)", () => {
     const started: DateRange = { start: d(15), end: null };
-    expect(nextRange(started, d(19), 4)).toEqual({ start: d(15), end: d(19) });
+    expect(nextRange(started, d(18), 4)).toEqual({ start: d(15), end: d(18) });
   });
 
-  it("시작일 + 5일(20일)은 범위 초과 → 새 시작점이 된다", () => {
+  it("5일째(19일)는 범위 초과 → 새 시작점이 된다", () => {
     const started: DateRange = { start: d(15), end: null };
-    expect(nextRange(started, d(20), 4)).toEqual({ start: d(20), end: null });
+    expect(nextRange(started, d(19), 4)).toEqual({ start: d(19), end: null });
   });
 
   it("시작일 이전 날짜를 탭하면 새 시작점이 된다", () => {
@@ -53,7 +53,7 @@ describe("nextRange (최대 4일 규칙)", () => {
   });
 
   it("범위 완성 후 탭하면 선택이 초기화된다", () => {
-    const full: DateRange = { start: d(15), end: d(19) };
+    const full: DateRange = { start: d(15), end: d(18) };
     expect(nextRange(full, d(3), 4)).toEqual({ start: d(3), end: null });
   });
 });
