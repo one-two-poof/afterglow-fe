@@ -22,6 +22,7 @@ import { ScheduleStep } from "./ScheduleStep";
 import { TreatmentDateStep } from "./TreatmentDateStep";
 import { TreatmentStep } from "./TreatmentStep";
 import { type TripPlanPayload } from "./types";
+import { WalkPreferenceStep } from "./WalkPreferenceStep";
 
 const MS_PER_DAY = 86400000;
 
@@ -51,11 +52,6 @@ const MOCK_PLACES: Place[] = [
   },
 ];
 
-// TODO: 도보선호 전용 단계 UI 확정 시 사용자 입력으로 대체
-const DEFAULT_FORM = {
-  user_walk_preference: 3,
-} as const;
-
 /**
  * 현재 선택 상태를 제출 페이로드 형태로 조립.
  * 필수 값(여행 기간)이 없으면 null.
@@ -67,6 +63,7 @@ const buildTripPlanPayload = (
   treatments: string[],
   treatmentDates: Record<string, string>,
   userPurpose: string,
+  userWalkPreference: number,
 ): TripPlanPayload | null => {
   const { start, end } = range;
   if (!start || !end) {
@@ -94,7 +91,7 @@ const buildTripPlanPayload = (
       .filter((name) => treatmentDates[name])
       .map((name) => ({ name, date: treatmentDates[name]! })),
     user_purpose: userPurpose,
-    user_walk_preference: DEFAULT_FORM.user_walk_preference,
+    user_walk_preference: userWalkPreference,
     daily_starts,
   };
 };
@@ -129,6 +126,8 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
   );
   // 여행 주요 목적 (단일 선택)
   const [purpose, setPurpose] = useState<string | null>(null);
+  // 도보 선호도 (1~5)
+  const [walkPreference, setWalkPreference] = useState<number | null>(null);
   // 여행 일자별 선택 숙소 (인덱스 = n번째 날)
   const [placeIds, setPlaceIds] = useState<(string | null)[]>([]);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -141,6 +140,7 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
     setTreatments([]);
     setTreatmentDates({});
     setPurpose(null);
+    setWalkPreference(null);
     setPlaceIds([]);
     onClose();
   }, [onClose]);
@@ -248,6 +248,13 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
       canNext: Boolean(purpose),
       content: <PurposeStep value={purpose} onChange={setPurpose} />,
     },
+    {
+      title: "도보 선호도 선택",
+      canNext: walkPreference !== null,
+      content: (
+        <WalkPreferenceStep value={walkPreference} onChange={setWalkPreference} />
+      ),
+    },
   ];
 
   const current = steps[step]!;
@@ -275,6 +282,7 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
       treatments,
       treatmentDates,
       purpose ?? "",
+      walkPreference ?? 3,
     );
     if (!payload) {
       return;
@@ -367,7 +375,7 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
             disabled={!current.canNext}
             onClick={handleNext}
           >
-            {isLast ? "완료" : "다음 단계로"}
+            {isLast ? "코스 추천 받기 ✨" : "다음 단계로"}
           </Button>
         </footer>
       </div>
