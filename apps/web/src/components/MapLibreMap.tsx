@@ -6,6 +6,8 @@ import * as maplibregl from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import { useEffect, useRef } from "react";
 
+import { buildShadows } from "@/lib/shadows";
+
 // MapLibre 스타일이 정상 렌더되려면 CSS를 먼저 로드해야 함
 // Source: https://maplibre.org/maplibre-gl-js/docs/ (Quickstart)
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -22,6 +24,10 @@ const BUILDINGS_PMTILES_URL =
 
 // pmtiles 소스가 참조하는 vector layer id (pmtiles 메타데이터의 vector_layers[].id)
 const BUILDINGS_SOURCE_LAYER = "buildings";
+
+// 그림자 계산 기준 시각. TODO(③): 경로 요청의 at(이동 시각)으로 대체 예정.
+// 지금은 그림자가 확실히 보이는 데모용 오후 시각으로 고정.
+const SHADOW_DATE = new Date("2026-08-13T15:00:00+09:00");
 
 export default function MapLibreMap() {
   const mapEl = useRef<HTMLDivElement>(null);
@@ -52,6 +58,23 @@ export default function MapLibreMap() {
         url: `pmtiles://${BUILDINGS_PMTILES_URL}`,
       });
 
+      // 그림자는 프론트에서 계산 → 빈 GeoJSON 소스로 시작해 이동 시 갱신
+      map.addSource("shadows", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+
+      // 그림자 레이어를 먼저 추가 → 건물 레이어가 그 위에 그려짐(건물이 그림자 위)
+      map.addLayer({
+        id: "buildings-shadow",
+        type: "fill",
+        source: "shadows",
+        paint: {
+          "fill-color": "#0f172a",
+          "fill-opacity": 0.35,
+        },
+      });
+
       map.addLayer({
         id: "buildings-fill",
         type: "fill",
@@ -63,6 +86,24 @@ export default function MapLibreMap() {
           "fill-outline-color": "#374151",
         },
       });
+
+      // 뷰포트의 건물로 그림자를 계산해 shadows 소스에 반영
+      const updateShadows = () => {
+        const features = map.querySourceFeatures("buildings", {
+          sourceLayer: BUILDINGS_SOURCE_LAYER,
+        });
+        const center = map.getCenter();
+        const data = buildShadows(
+          features,
+          { lat: center.lat, lng: center.lng },
+          SHADOW_DATE,
+        );
+        map.getSource<maplibregl.GeoJSONSource>("shadows")?.setData(data);
+      };
+
+      // 이동/줌 종료 시 재계산. 최초 1회는 타일 로드가 끝난 idle 시점에 계산
+      map.on("moveend", updateShadows);
+      map.once("idle", updateShadows);
     });
 
     return () => {
