@@ -6,7 +6,7 @@ import * as maplibregl from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import { useEffect, useRef } from "react";
 
-import { buildShadows } from "@/lib/shadows";
+import { buildShadows } from "./shadows";
 
 // MapLibre 스타일이 정상 렌더되려면 CSS를 먼저 로드해야 함
 // Source: https://maplibre.org/maplibre-gl-js/docs/ (Quickstart)

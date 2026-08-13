@@ -1,6 +1,6 @@
 "use client";
 
-import MapLibreMap from "@/components/MapLibreMap";
+import { MapLibreMap } from "@/components";
 import { Input, TagList } from "@afterglow/ui";
 import { Search, X } from "lucide-react";
 import { useState } from "react";
