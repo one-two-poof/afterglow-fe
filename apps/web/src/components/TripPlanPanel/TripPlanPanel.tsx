@@ -14,10 +14,11 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
-import { type DateRange } from "@/components/Calendar";
+import { addDays, formatISODate, type DateRange } from "@/components/Calendar";
 
 import { PlaceStep, type Place } from "./PlaceStep";
 import { ScheduleStep } from "./ScheduleStep";
+import { type TripPlanPayload } from "./types";
 
 const MS_PER_DAY = 86400000;
 
@@ -27,21 +28,72 @@ const getDayCount = ({ start, end }: DateRange) =>
     ? Math.round((end.getTime() - start.getTime()) / MS_PER_DAY) + 1
     : 0;
 
-// TODO: 실제 추천 숙소 API 연동 시 교체
+// TODO: 실제 추천 숙소 API 연동 시 교체 (lat/lon 포함해 내려받기)
 const MOCK_PLACES: Place[] = [
   {
     id: "dormy",
     category: "숙소",
     name: "도미인 서울 강남",
     address: "서울 서초구 강남대로 415",
+    lat: 37.5,
+    lon: 127.026,
   },
   {
     id: "uandi",
     category: "숙소",
     name: "유앤아이 호텔 강남점",
     address: "서울 서초구 강남대로 421",
+    lat: 37.503,
+    lon: 127.024,
   },
 ];
+
+// TODO: 시술/목적/도보선호 전용 단계 UI 확정 시 사용자 입력으로 대체
+const DEFAULT_FORM = {
+  treatment: "리프팅",
+  user_purpose: "휴식",
+  user_walk_preference: 3,
+} as const;
+
+/**
+ * 현재 선택 상태를 제출 페이로드 형태로 조립.
+ * 필수 값(여행 기간)이 없으면 null.
+ */
+const buildTripPlanPayload = (
+  range: DateRange,
+  placeIds: (string | null)[],
+  places: Place[],
+): TripPlanPayload | null => {
+  const { start, end } = range;
+  if (!start || !end) {
+    return null;
+  }
+
+  const daily_starts: TripPlanPayload["daily_starts"] = [];
+  placeIds.forEach((id, i) => {
+    const place = id ? places.find((p) => p.id === id) : undefined;
+    if (!place) {
+      return;
+    }
+    daily_starts.push({
+      date: formatISODate(addDays(start, i)),
+      start_name: place.name,
+      start_lat: place.lat,
+      start_lon: place.lon,
+    });
+  });
+
+  return {
+    trip_start_date: formatISODate(start),
+    trip_end_date: formatISODate(end),
+    // TODO: 시술일 전용 선택 UI 확정 전까지 시작일로 대체
+    treatment_date: formatISODate(start),
+    treatment: DEFAULT_FORM.treatment,
+    user_purpose: DEFAULT_FORM.user_purpose,
+    user_walk_preference: DEFAULT_FORM.user_walk_preference,
+    daily_starts,
+  };
+};
 
 export interface TripPlanPanelProps {
   open: boolean;
@@ -149,8 +201,15 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
   const handleNext = () => {
     if (!isLast) {
       setStep((prev) => prev + 1);
+      return;
     }
-    // TODO: 마지막 단계에서 폼 제출
+    // 마지막 단계 → 제출 페이로드 조립
+    const payload = buildTripPlanPayload(range, placeIds, MOCK_PLACES);
+    if (!payload) {
+      return;
+    }
+    // TODO: 실제 제출 API 연동 (현재는 페이로드 형태 확인용 로그)
+    console.log("[TripPlan] submit payload", payload);
   };
 
   // 패널 내부로 포커스 가두기(Tab 순환)

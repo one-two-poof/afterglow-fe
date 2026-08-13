@@ -8,6 +8,10 @@ export interface Place {
   id: string;
   name: string;
   address: string;
+  /** 위도 (제출 시 start_lat) */
+  lat: number;
+  /** 경도 (제출 시 start_lon) */
+  lon: number;
   category?: string;
   imageUrl?: string;
 }
