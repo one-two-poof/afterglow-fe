@@ -60,10 +60,17 @@ export const isInRange = (day: Date, range: DateRange): boolean => {
   );
 };
 
+/**
+ * 날짜를 탭했을 때의 다음 선택 상태.
+ *
+ * 규칙: 시작일을 먼저 고르고, 시작일 포함 최대 `maxDays`개까지 선택 가능.
+ * 예) maxDays=4 → 15일 선택 후 최대 18일까지(15·16·17·18).
+ * 범위 초과/이전 날짜를 탭하면 그 날짜가 새 시작점이 된다.
+ */
 export const nextRange = (
   range: DateRange,
   day: Date,
-  maxDaysFromStart: number,
+  maxDays: number,
 ): DateRange => {
   const { start, end } = range;
 
@@ -75,7 +82,8 @@ export const nextRange = (
   }
 
   const diff = diffInDays(start, day);
-  if (diff > 0 && diff <= maxDaysFromStart) {
+  // 시작일 포함 maxDays개 → 시작일로부터 최대 (maxDays - 1)일 뒤까지
+  if (diff > 0 && diff <= maxDays - 1) {
     return { start, end: day };
   }
   return { start: day, end: null };
