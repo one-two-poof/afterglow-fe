@@ -7,11 +7,7 @@ import {
   Modal,
   TagList,
 } from "@afterglow/ui";
-import {
-  Calendar,
-  TripSummaryCard,
-  type DateRange,
-} from "@/components/Calendar";
+import { Calendar, TripSummaryCard, type DateRange } from "@/components";
 import { Eye, EyeOff, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";

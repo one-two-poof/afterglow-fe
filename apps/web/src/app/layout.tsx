@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import LoginModal from "@/components/LoginModal";
+import { LoginModal } from "@/components";
 import { Providers } from "./providers";
 import "./globals.css";
 
