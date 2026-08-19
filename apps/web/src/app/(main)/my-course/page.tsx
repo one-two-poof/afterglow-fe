@@ -1,5 +1,5 @@
-const page = () => {
-  return <div>page</div>;
-};
+import { MyCourse } from "@/components/MyCourse";
 
-export default page;
+const MyCourseRoute = () => <MyCourse />;
+
+export default MyCourseRoute;

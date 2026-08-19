@@ -7,6 +7,7 @@
  *
  * 좌표(mapX/mapY)는 @afterglow/utils 의 MapPoint/toLatLng 로 지도 좌표(lat/lng)로 변환.
  */
+import type { Place } from "@/types/place";
 import { toLatLng, type LatLng, type MapPoint } from "@afterglow/utils";
 
 /** 코스에 포함된 개별 장소 (방문 순서대로) */
@@ -53,10 +54,33 @@ export interface RecommendationResponse {
 }
 
 /**
- * 채택되어 서버에 저장된 코스. 추천 코스(RecommendedCourse)에 서버 부여 id가 붙은 형태.
- * ⚠️ GET /my-courses 응답 스키마는 아직 미확정 — id 필드명/타입은 확정 시 조정.
+ * 저장된 코스의 하루 일정.
+ * places가 전체 Place 엔티티다 (추천 응답의 RecommendedPlace와 다름).
  */
-export type SavedCourse = RecommendedCourse & { id: number };
+export interface SavedDailySchedule {
+  /** "YYYY-MM-DD" */
+  date: string;
+  /** 그날의 출발지(숙소·병원 등) */
+  start_location: MapPoint & { name: string };
+  places: Place[];
+}
+
+/**
+ * GET /api/recommendations 응답 아이템 (저장된 "내 코스").
+ * 추천 코스와 유사하나 selectionId/selectedAt이 붙고,
+ * daily_schedules[].places가 전체 Place 엔티티다.
+ */
+export interface SavedCourse {
+  /** 저장 선택 식별자 (서버 부여) */
+  selectionId: number;
+  /** 저장 시각 (ISO 8601) */
+  selectedAt: string;
+  rank: number;
+  course_id: string;
+  total_distance_km: number;
+  treatment: { name: string; date: string }[];
+  daily_schedules: SavedDailySchedule[];
+}
 
 /**
  * 임시(경로 추천 디버깅용): 코스의 "출발지 → 도착지" 두 지점만 마커로 찍는다.
@@ -81,4 +105,21 @@ export function courseToMarkers(
     { ...toLatLng(first), label: `출발지${nameOf(first) ? ` · ${nameOf(first)}` : ""}` },
     { ...toLatLng(last), label: `도착지${nameOf(last) ? ` · ${nameOf(last)}` : ""}` },
   ];
+}
+
+/**
+ * 저장된 코스(SavedCourse)의 모든 지점을 마커로.
+ * 각 날의 출발지 + 방문 장소 전체를 이름 라벨과 함께 반환한다.
+ * (TODO: from/to 경로 API 연동 시 마커 대신/함께 경로선도 그림)
+ */
+export function savedCourseToMarkers(
+  course: SavedCourse,
+): (LatLng & { label: string })[] {
+  return course.daily_schedules.flatMap((day) => [
+    { ...toLatLng(day.start_location), label: day.start_location.name },
+    ...day.places.map((place) => ({
+      ...toLatLng(place),
+      label: place.placeName,
+    })),
+  ]);
 }
