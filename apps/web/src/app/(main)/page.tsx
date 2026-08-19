@@ -163,7 +163,7 @@ export default function Home() {
         type="button"
         aria-label="여행 일정 만들기"
         onClick={handleCreatePlan}
-        className="absolute right-5 bottom-28 z-10 flex size-14 items-center justify-center rounded-full bg-action-primary text-on-action-primary shadow-md hover:bg-action-primary-hover focus-visible:ring-2 focus-visible:ring-border-focus focus-visible:outline-none"
+        className="absolute right-5 bottom-24 z-10 flex size-14 items-center justify-center rounded-full bg-action-primary text-on-action-primary shadow-md hover:bg-action-primary-hover focus-visible:ring-2 focus-visible:ring-border-focus focus-visible:outline-none"
       >
         <Plus size={26} />
       </button>
