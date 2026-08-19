@@ -3,6 +3,7 @@
 // maplibre-gl v5 사용: v6는 워커를 별도 ES 모듈(maplibre-gl-worker.mjs)로 분리하는데
 // Next.js 번들러가 이 워커 청크를 서빙하지 못해 404 → 지도가 로드되지 않음
 import type { LatLng } from "@afterglow/utils";
+import { LocateFixed } from "lucide-react";
 import * as maplibregl from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import { useEffect, useRef } from "react";
@@ -80,6 +81,8 @@ export default function MapLibreMap({
   const markerRefs = useRef<maplibregl.Marker[]>([]);
   // 최신 routeLines를 load 핸들러(클로저)에서 읽기 위한 ref
   const routeLinesRef = useRef<RouteLine[]>(routeLines);
+  // 현위치(위/경도). 최초 포커스 + 나침반 버튼에서 재사용
+  const userLocationRef = useRef<LatLng | null>(null);
 
   useEffect(() => {
     if (!mapEl.current) {
@@ -95,10 +98,29 @@ export default function MapLibreMap({
     const map = new maplibregl.Map({
       container: mapEl.current,
       style: BASEMAP_STYLE_URL,
-      center: [126.978, 37.5665], // [lng, lat] 서울시청
+      center: [126.978, 37.5665], // [lng, lat] 서울시청 (현위치 확보 전 기본값)
       zoom: 15,
+      // 우측 하단 기본 attribution("MapLibre …") 숨김
+      attributionControl: false,
     });
     mapRef.current = map;
+
+    // 지도 진입 시 현위치를 확보해 중앙으로 이동 (거부/실패 시 기본값 유지)
+    let cancelled = false;
+    if (typeof navigator !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (cancelled) {
+            return;
+          }
+          const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          userLocationRef.current = loc;
+          map.flyTo({ center: [loc.lng, loc.lat], zoom: 15 });
+        },
+        undefined,
+        { enableHighAccuracy: true, timeout: 8000 },
+      );
+    }
 
     // 배경 스타일 로드 완료 후 건물 소스/레이어를 추가
     // Source: https://maplibre.org/maplibre-gl-js/docs/ (addSource/addLayer)
@@ -198,6 +220,7 @@ export default function MapLibreMap({
     });
 
     return () => {
+      cancelled = true;
       mapRef.current = null;
       map.remove();
       maplibregl.removeProtocol("pmtiles");
@@ -266,5 +289,37 @@ export default function MapLibreMap({
     }
   }, [routeLines]);
 
-  return <div ref={mapEl} className="h-full w-full" />;
+  // 나침반 버튼: 현위치로 복귀 (아직 위치가 없으면 다시 요청)
+  const handleRecenter = () => {
+    const map = mapRef.current;
+    if (!map) {
+      return;
+    }
+    const loc = userLocationRef.current;
+    if (loc) {
+      map.flyTo({ center: [loc.lng, loc.lat], zoom: 15 });
+      return;
+    }
+    if (typeof navigator !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((pos) => {
+        const next = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        userLocationRef.current = next;
+        map.flyTo({ center: [next.lng, next.lat], zoom: 15 });
+      });
+    }
+  };
+
+  return (
+    <div className="relative h-full w-full">
+      <div ref={mapEl} className="h-full w-full" />
+      <button
+        type="button"
+        onClick={handleRecenter}
+        aria-label="현위치로 이동"
+        className="absolute bottom-24 left-5 z-10 flex size-14 items-center justify-center rounded-full bg-neutral-0 text-text shadow-md transition-colors hover:bg-surface-muted focus-visible:ring-2 focus-visible:ring-border-focus focus-visible:outline-none"
+      >
+        <LocateFixed size={24} aria-hidden="true" />
+      </button>
+    </div>
+  );
 }
