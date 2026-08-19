@@ -6,11 +6,13 @@ import { usePlaces } from "@/hooks/use-places";
 import { getAccessToken } from "@/lib/auth";
 import { fetchCourseRouteLines, type RouteLine } from "@/lib/route";
 import { useAdoptedCoursesStore } from "@/stores/adopted-courses-store";
+import type { Place } from "@/types/place";
 import {
   courseToMarkers,
   type RecommendedCourse,
 } from "@/types/recommendation";
 import { Input, TagList } from "@afterglow/ui";
+import { toLatLng } from "@afterglow/utils";
 import { Plus, Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -200,6 +202,8 @@ export default function Home() {
   const [search, setSearch] = useState("");
   // 드롭다운 열림 여부. 검색어와 분리해, 결과 선택 시 닫아 재요청을 막는다.
   const [searchOpen, setSearchOpen] = useState(false);
+  // 검색 결과에서 선택한 장소 (지도 마커/이동 대상)
+  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const debouncedSearch = useDebounce(search, 300);
   // 선택으로 닫힌 상태(searchOpen=false)에서는 요청하지 않는다.
   const searchEnabled = searchOpen && debouncedSearch.trim() !== "";
@@ -218,10 +222,13 @@ export default function Home() {
     setSearchOpen(false);
   };
 
-  // 결과 선택: 입력값만 그 장소명으로 바꾸고, 드롭다운을 닫아 재요청을 막는다.
-  const selectPlace = (placeName: string) => {
-    setSearch(placeName);
+  // 결과 선택: 입력값을 장소명으로 바꾸고, 드롭다운을 닫아 재요청을 막는다.
+  // 선택한 장소를 지도 마커 대상으로 두고, 코스 선택(태그)은 해제한다.
+  const selectPlace = (place: Place) => {
+    setSearch(place.placeName);
     setSearchOpen(false);
+    setSelectedPlace(place);
+    setFilter("all");
   };
 
   const showSearchResults = searchOpen && search.trim() !== "";
@@ -235,12 +242,15 @@ export default function Home() {
     MOCK_COURSES.forEach((course) => adopt(course));
   }, [adopt]);
 
-  // 선택된 태그가 채택 코스면 그 장소들을 마커로. 카테고리면 마커 없음.
+  // 마커: 검색으로 선택한 장소가 있으면 그 한 곳을, 없으면 선택 코스의 장소들을 찍는다.
+  // (MapLibreMap이 markers 변경 시 fitBounds로 지도도 이동시킨다)
   const selectedCourse = courses.find((c) => c.course_id === filter);
-  const markers = useMemo(
-    () => (selectedCourse ? courseToMarkers(selectedCourse) : []),
-    [selectedCourse],
-  );
+  const markers = useMemo(() => {
+    if (selectedPlace) {
+      return [{ ...toLatLng(selectedPlace), label: selectedPlace.placeName }];
+    }
+    return selectedCourse ? courseToMarkers(selectedCourse) : [];
+  }, [selectedPlace, selectedCourse]);
 
   // 코스 선택 시 경로 API로 구간별 경로를 받아 그린다. 선택 해제 시 비운다.
   const [routeLines, setRouteLines] = useState<RouteLine[]>([]);
@@ -308,7 +318,7 @@ export default function Home() {
                 <li key={place.id} className="border-b border-border last:border-b-0">
                   <button
                     type="button"
-                    onClick={() => selectPlace(place.placeName)}
+                    onClick={() => selectPlace(place)}
                     className="w-full px-4 py-3 text-left text-body-sm text-text hover:bg-surface-muted focus-visible:bg-surface-muted focus-visible:outline-none"
                   >
                     {place.placeName}
@@ -330,7 +340,10 @@ export default function Home() {
 
       <TagList
         value={filter}
-        onChange={setFilter}
+        onChange={(value) => {
+          setFilter(value);
+          setSelectedPlace(null);
+        }}
         className="absolute bottom-0 p-5"
       >
         {CATEGORY_ITEMS.map((item) => (
