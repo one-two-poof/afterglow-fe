@@ -133,31 +133,27 @@ export const PlaceStep = ({ days, selected, onSelect }: PlaceStepProps) => {
           const isActive = i === active;
           return (
             <div key={formatDay(day)} className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between">
-                <span
-                  className={
-                    isActive
-                      ? "text-label-sm font-medium text-primary"
-                      : "text-label-sm text-text"
-                  }
-                >
-                  {formatDay(day)}
-                  {isActive && " · 검색 대상"}
-                </span>
-                {place && (
-                  <button
-                    type="button"
-                    onClick={() => onSelect(i, null)}
-                    className="text-label-sm text-text-muted underline underline-offset-2 hover:text-text focus-visible:outline-none"
-                  >
-                    선택 취소
-                  </button>
-                )}
-              </div>
+              <span
+                className={
+                  isActive
+                    ? "text-label-sm font-medium text-primary"
+                    : "text-label-sm text-text"
+                }
+              >
+                {formatDay(day)}
+                {isActive && " · 검색 대상"}
+              </span>
 
               {place ? (
-                // 카드를 누르면 그 날짜를 검색 대상으로 (교체 검색)
-                toCard(place, () => setActiveIndex(i), true)
+                // 체크 표시를 눌러 선택 해제
+                <PlaceCard
+                  category={place.categoryName}
+                  name={place.placeName}
+                  address={place.roadAddressName || place.addressName}
+                  imageUrl={place.image}
+                  selected
+                  onToggleSelect={() => onSelect(i, null)}
+                />
               ) : (
                 // PlaceCard와 동일한 박스 구조(p-3 + size-16)로 높이를 맞춰
                 // 선택 시 레이아웃 시프트를 없앤다.
