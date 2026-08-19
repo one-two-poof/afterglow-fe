@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { PlaceCard } from "@/components/PlaceCard";
 
 export interface Place {
-  /** 병원·숙소 데이터 아이디 (제출 시 daily_starts[].start_id) */
+  /** 병원·숙소 데이터 아이디 (제출 시 daily_startList[].start_id) */
   id: number;
   name: string;
   address: string;

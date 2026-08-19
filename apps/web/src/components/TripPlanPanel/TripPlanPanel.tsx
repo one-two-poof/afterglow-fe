@@ -137,12 +137,12 @@ const buildTripPlanPayload = (
     return null;
   }
 
-  const daily_starts: TripPlanPayload["daily_starts"] = [];
+  const daily_startList: TripPlanPayload["daily_startList"] = [];
   placeIds.forEach((id, i) => {
     if (id === null) {
       return;
     }
-    daily_starts.push({
+    daily_startList.push({
       date: formatISODate(addDays(start, i)),
       start_id: id,
     });
@@ -151,12 +151,12 @@ const buildTripPlanPayload = (
   return {
     trip_start_date: formatISODate(start),
     trip_end_date: formatISODate(end),
-    treatment: treatments
+    treatmentList: treatments
       .filter((name) => treatmentDates[name])
       .map((name) => ({ name, date: treatmentDates[name]! })),
     user_purpose: userPurpose,
     user_walk_preference: userWalkPreference,
-    daily_starts,
+    daily_startList,
   };
 };
 
