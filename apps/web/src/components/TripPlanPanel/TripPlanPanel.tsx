@@ -16,7 +16,6 @@ import { createPortal } from "react-dom";
 
 import { addDays, formatISODate, type DateRange } from "@/components/Calendar";
 import { useAdoptedCoursesStore } from "@/stores/adopted-courses-store";
-import type { RecommendedCourse } from "@/types/recommendation";
 
 import { PlaceStep, type Place } from "./PlaceStep";
 import { PurposeStep } from "./PurposeStep";
@@ -25,6 +24,7 @@ import { ScheduleStep } from "./ScheduleStep";
 import { TreatmentDateStep } from "./TreatmentDateStep";
 import { TreatmentStep } from "./TreatmentStep";
 import { type TripPlanPayload } from "./types";
+import { useRecommendCourses } from "./use-recommend-courses";
 import { WalkPreferenceStep } from "./WalkPreferenceStep";
 
 const MS_PER_DAY = 86400000;
@@ -52,71 +52,6 @@ const MOCK_PLACES: Place[] = [
     address: "서울 서초구 강남대로 421",
     lat: 37.503,
     lon: 127.024,
-  },
-];
-
-// TODO: 실제 ML ① 추천 API 호출(POST TripPlanPayload → recommended_courses)로 교체.
-// 지금은 결과 단계 UI 검증용 목업. mapX=경도/mapY=위도 (toLatLng 기준).
-const getMockRecommendations = (
-  _payload: TripPlanPayload,
-): RecommendedCourse[] => [
-  {
-    rank: 1,
-    course_id: "C00001",
-    total_distance_km: 8.4,
-    treatment: [{ name: "리프팅", date: "2026-06-08" }],
-    daily_schedules: [
-      {
-        date: "2026-06-07",
-        start_location: { name: "도미인 서울 강남", mapX: 127.026, mapY: 37.5 },
-        places: [
-          {
-            visit_order: 1,
-            place_name: "봉은사",
-            place_category: "명소",
-            mapX: 127.058,
-            mapY: 37.515,
-            is_indoor: 0,
-            walk_hard: 2,
-            dist_to_prev_km: 0,
-          },
-          {
-            visit_order: 2,
-            place_name: "스타필드 코엑스몰",
-            place_category: "쇼핑",
-            mapX: 127.059,
-            mapY: 37.512,
-            is_indoor: 1,
-            walk_hard: 1,
-            dist_to_prev_km: 0.4,
-          },
-        ],
-      },
-    ],
-  },
-  {
-    rank: 2,
-    course_id: "C00002",
-    total_distance_km: 12.1,
-    treatment: [{ name: "리프팅", date: "2026-06-08" }],
-    daily_schedules: [
-      {
-        date: "2026-06-07",
-        start_location: { name: "도미인 서울 강남", mapX: 127.026, mapY: 37.5 },
-        places: [
-          {
-            visit_order: 1,
-            place_name: "가로수길",
-            place_category: "명소",
-            mapX: 127.023,
-            mapY: 37.52,
-            is_indoor: 0,
-            walk_hard: 3,
-            dist_to_prev_km: 0,
-          },
-        ],
-      },
-    ],
   },
 ];
 
@@ -197,12 +132,14 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
 
   // 국면: 폼 작성 → 제출 후 결과(rank 브라우징)
   const [phase, setPhase] = useState<"form" | "result">("form");
-  // ML ①이 준 추천 코스들 (rank 순)
-  const [recommendations, setRecommendations] = useState<RecommendedCourse[]>(
-    [],
-  );
   // 현재 보고 있는 rank 인덱스 (건너뛰기로 증가)
   const [rankIndex, setRankIndex] = useState(0);
+  // ML ① 추천 코스: 폼 제출 mutation. 결과/로딩/에러를 여기서 관리한다.
+  const recommendMutation = useRecommendCourses();
+  // ML ①이 준 추천 코스들 (rank 순). mutation 결과에서 파생.
+  const recommendations = recommendMutation.data ?? [];
+  // reset은 참조 안정적 → handleClose useCallback 의존성으로 안전
+  const { reset: resetRecommend } = recommendMutation;
   const adoptCourse = useAdoptedCoursesStore((s) => s.adopt);
 
   const panelRef = useRef<HTMLDivElement>(null);
@@ -218,10 +155,10 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
     setWalkPreference(null);
     setPlaceIds([]);
     setPhase("form");
-    setRecommendations([]);
     setRankIndex(0);
+    resetRecommend();
     onClose();
-  }, [onClose]);
+  }, [onClose, resetRecommend]);
 
   // Esc 닫기 + 바디 스크롤 잠금 + 열릴 때 포커스 이동/복원
   useEffect(() => {
@@ -296,7 +233,9 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
     {
       title: "시술 종류 선택",
       canNext: treatments.length > 0,
-      content: <TreatmentStep selected={treatments} onToggle={toggleTreatment} />,
+      content: (
+        <TreatmentStep selected={treatments} onToggle={toggleTreatment} />
+      ),
     },
     {
       title: "시술 날짜 선택",
@@ -330,7 +269,10 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
       title: "도보 선호도 선택",
       canNext: walkPreference !== null,
       content: (
-        <WalkPreferenceStep value={walkPreference} onChange={setWalkPreference} />
+        <WalkPreferenceStep
+          value={walkPreference}
+          onChange={setWalkPreference}
+        />
       ),
     },
   ];
@@ -360,6 +302,9 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
       setStep((prev) => prev + 1);
       return;
     }
+    if (recommendMutation.isPending) {
+      return;
+    }
     // 마지막 단계 → 제출 페이로드 조립
     const payload = buildTripPlanPayload(
       range,
@@ -372,11 +317,13 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
     if (!payload) {
       return;
     }
-    // TODO: 실제 ML ① 추천 API 호출로 교체 (현재는 목업)
-    const courses = getMockRecommendations(payload);
-    setRecommendations(courses);
-    setRankIndex(0);
-    setPhase("result");
+    // ML ① 추천 API 호출 (POST /api/course → recommended_courses)
+    recommendMutation.mutate(payload, {
+      onSuccess: () => {
+        setRankIndex(0);
+        setPhase("result");
+      },
+    });
   };
 
   // 결과 단계: 현재 코스 채택 → "내 코스"에 담고 패널 종료
@@ -527,15 +474,31 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
               </Button>
             )
           ) : (
-            <Button
-              variant="primary"
-              size="lg"
-              className="w-full"
-              disabled={!current.canNext}
-              onClick={handleNext}
-            >
-              {isLast ? "코스 추천 받기 ✨" : "다음 단계로"}
-            </Button>
+            <>
+              {recommendMutation.isError && (
+                <p
+                  role="alert"
+                  className="mb-2 text-center text-body-sm text-error"
+                >
+                  {recommendMutation.error instanceof Error
+                    ? recommendMutation.error.message
+                    : "코스 추천에 실패했어요. 잠시 후 다시 시도해주세요."}
+                </p>
+              )}
+              <Button
+                variant="primary"
+                size="lg"
+                className="w-full"
+                disabled={!current.canNext || recommendMutation.isPending}
+                onClick={handleNext}
+              >
+                {isLast
+                  ? recommendMutation.isPending
+                    ? "코스 추천 받는 중…"
+                    : "코스 추천 받기"
+                  : "다음 단계로"}
+              </Button>
+            </>
           )}
         </footer>
       </div>

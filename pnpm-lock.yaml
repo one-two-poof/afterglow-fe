@@ -105,6 +105,9 @@ importers:
       '@tanstack/react-query-devtools':
         specifier: ^5.101.4
         version: 5.101.4(@tanstack/react-query@5.101.4(react@19.2.8))(react@19.2.8)
+      axios:
+        specifier: ^1.18.1
+        version: 1.18.1
       lucide-react:
         specifier: ^1.27.0
         version: 1.27.0(react@19.2.8)
