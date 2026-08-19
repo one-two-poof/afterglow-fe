@@ -9,24 +9,28 @@
  */
 import axios, { AxiosError, type AxiosInstance } from "axios";
 
-// TODO: 인증 구현되면 getAccessToken import 복구 (아래 요청 인터셉터와 함께)
-import { UnauthorizedError } from "@/lib/auth";
+import { getAccessToken, UnauthorizedError } from "@/lib/auth";
 
-const createClient = (baseURL: string | undefined): AxiosInstance => {
+const createClient = (
+  baseURL: string | undefined,
+  { withAuth = false }: { withAuth?: boolean } = {},
+): AxiosInstance => {
   const client = axios.create({
     baseURL,
     headers: { "Content-Type": "application/json" },
   });
 
-  // TODO: 인증 구현 후 주석 해제 — 토큰이 있으면 Authorization 자동 첨부
-  // (getAccessToken import도 함께 복구할 것)
-  // client.interceptors.request.use((config) => {
-  //   const token = getAccessToken();
-  //   if (token) {
-  //     config.headers.Authorization = `Bearer ${token}`;
-  //   }
-  //   return config;
-  // });
+  // 요청 인터셉터: withAuth인 클라이언트만 토큰이 있으면 Authorization 첨부
+  // (aiClient는 CORS preflight 회피를 위해 인증 헤더를 붙이지 않음)
+  if (withAuth) {
+    client.interceptors.request.use((config) => {
+      const token = getAccessToken();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    });
+  }
 
   // 응답 인터셉터: 에러를 앱 표준 형태로 정규화 (401/403 → UnauthorizedError)
   client.interceptors.response.use(
@@ -46,8 +50,10 @@ const createClient = (baseURL: string | undefined): AxiosInstance => {
   return client;
 };
 
-/** 메인 BE (인증·경로 등) */
-export const apiClient = createClient(process.env.NEXT_PUBLIC_API_URL);
+/** 메인 BE (인증 필요 — 토큰 자동 첨부) */
+export const apiClient = createClient(process.env.NEXT_PUBLIC_API_URL, {
+  withAuth: true,
+});
 
-/** ML 추천 서버 */
+/** ML 추천 서버 (인증 없음) */
 export const aiClient = createClient(process.env.NEXT_PUBLIC_AI_API_URL);
