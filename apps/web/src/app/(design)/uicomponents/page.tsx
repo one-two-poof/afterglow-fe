@@ -1,12 +1,5 @@
 "use client";
-import {
-  StatusBadge,
-  Button,
-  Input,
-  Logo,
-  Modal,
-  TagList,
-} from "@afterglow/ui";
+import { StatusBadge, Button, Input, Logo, TagList } from "@afterglow/ui";
 import {
   Calendar,
   PlaceCard,
@@ -18,7 +11,6 @@ import Link from "next/link";
 import { useState } from "react";
 
 const UiComponents = () => {
-  const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("all");
   const [showPassword, setShowPassword] = useState(false);
   const [keyword, setKeyword] = useState("");
@@ -105,33 +97,6 @@ const UiComponents = () => {
         <StatusBadge current={3} max={4} />
         <StatusBadge current={4} max={4} />
         <StatusBadge current={5} max={4} />
-      </div>
-
-      <div className="flex flex-col gap-4">
-        <Button variant="primary" onClick={() => setOpen(true)}>
-          모달 열기
-        </Button>
-
-        <Modal open={open} onClose={() => setOpen(false)}>
-          <Modal.Header>로그인</Modal.Header>
-
-          <Modal.Body>
-            <Button variant="secondary" size="lg">
-              Google로 계속하기
-            </Button>
-          </Modal.Body>
-
-          <Modal.Footer>
-            <Button variant="primary" size="md">
-              로그인하기
-            </Button>
-            <Modal.Close className="text-label-md text-neutral-500">
-              <Button variant="primary" size="md">
-                로그인하기
-              </Button>
-            </Modal.Close>
-          </Modal.Footer>
-        </Modal>
       </div>
 
       <div className="flex w-[280px] flex-col gap-4">

@@ -1,10 +1,12 @@
 "use client";
 
 import { MapLibreMap, TripPlanPanel } from "@/components";
+import { getAccessToken } from "@/lib/auth";
 import { useAdoptedCoursesStore } from "@/stores/adopted-courses-store";
 import { courseToMarkers } from "@/types/recommendation";
 import { Input, TagList } from "@afterglow/ui";
 import { Plus, Search, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 // 카테고리 필터 (코스 태그는 아래에서 채택 코스로 동적 생성)
@@ -22,6 +24,7 @@ const CATEGORY_ITEMS = [
 ];
 
 export default function Home() {
+  const router = useRouter();
   // 선택된 태그(카테고리 값 또는 채택 코스의 course_id)
   const [filter, setFilter] = useState("all");
   // TODO: 추후 검색 구현 시 Input value x 구현
@@ -36,6 +39,15 @@ export default function Home() {
     () => (selectedCourse ? courseToMarkers(selectedCourse) : []),
     [selectedCourse],
   );
+
+  // 여행 일정 만들기는 로그인 필요 — 미로그인 시 내 정보(로그인) 화면으로 이동
+  const handleCreatePlan = () => {
+    if (!getAccessToken()) {
+      router.push("/my-page");
+      return;
+    }
+    setPlanOpen(true);
+  };
 
   return (
     <div className="relative h-full">
@@ -68,7 +80,7 @@ export default function Home() {
       <button
         type="button"
         aria-label="여행 일정 만들기"
-        onClick={() => setPlanOpen(true)}
+        onClick={handleCreatePlan}
         className="absolute right-5 bottom-28 z-10 flex size-14 items-center justify-center rounded-full bg-action-primary text-on-action-primary shadow-md hover:bg-action-primary-hover focus-visible:ring-2 focus-visible:ring-border-focus focus-visible:outline-none"
       >
         <Plus size={26} />
