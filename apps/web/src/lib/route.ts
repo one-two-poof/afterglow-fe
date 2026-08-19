@@ -78,37 +78,36 @@ export interface RouteLine {
 const isShady = (label: string): boolean => /shad/i.test(label);
 
 /**
- * 코스 전체를 구간별로 경로 조회 → RouteLine 배열로.
- * 하루 안에서 [출발지, ...방문 장소]를 순서대로 이어 구간을 만든다.
- * 응답의 routes[](shortest·shady)를 모두 그린다.
+ * 임시(경로 추천 디버깅용): 코스 전체를 "출발지 → 도착지" 단일 구간으로만 그린다.
+ * - 출발지 = 코스의 맨 처음 지점(첫날 start_location)
+ * - 도착지 = 코스의 맨 마지막 지점(마지막 방문 장소)
+ * 중간 장소는 무시하고 두 점만 API로 이어 응답의 routes[](shortest·shady)를 그린다.
  */
 export async function fetchCourseRouteLines(
   course: RecommendedCourse,
 ): Promise<RouteLine[]> {
-  const at = new Date().toISOString();
-  const lines: RouteLine[] = [];
-
-  for (const day of course.daily_schedules) {
-    const points: MapPoint[] = [day.start_location, ...day.places];
-    for (let i = 0; i < points.length - 1; i += 1) {
-      const res = await fetchRoute({
-        from: toRoutePoint(points[i]!),
-        to: toRoutePoint(points[i + 1]!),
-        at,
-      });
-      for (const route of res.routes) {
-        if (!route.geometry) {
-          continue;
-        }
-        lines.push({
-          coordinates: route.geometry.coordinates,
-          label: route.label,
-          shadeRatio: route.avgShadeRatio,
-          shady: isShady(route.label),
-        });
-      }
-    }
+  const points: MapPoint[] = course.daily_schedules.flatMap((day) => [
+    day.start_location,
+    ...day.places,
+  ]);
+  const from = points[0];
+  const to = points[points.length - 1];
+  if (!from || !to || from === to) {
+    return [];
   }
 
-  return lines;
+  const res = await fetchRoute({
+    from: toRoutePoint(from),
+    to: toRoutePoint(to),
+    at: new Date().toISOString(),
+  });
+
+  return res.routes
+    .filter((route) => route.geometry)
+    .map((route) => ({
+      coordinates: route.geometry.coordinates,
+      label: route.label,
+      shadeRatio: route.avgShadeRatio,
+      shady: isShady(route.label),
+    }));
 }

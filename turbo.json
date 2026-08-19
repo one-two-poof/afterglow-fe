@@ -4,7 +4,11 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "env": ["NEXT_PUBLIC_API_URL"],
+      "env": [
+        "NEXT_PUBLIC_API_URL",
+        "NEXT_PUBLIC_AI_API_URL",
+        "NEXT_PUBLIC_BUILDINGS_PMTILES_URL"
+      ],
       "outputs": [".next/**", "!.next/cache/**"]
     },
     "dev": {

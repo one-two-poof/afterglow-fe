@@ -47,13 +47,9 @@ export interface RecommendedCourse {
   daily_schedules: DailySchedule[];
 }
 
-/** 통합 추천 코스 API 최상위 응답 */
+/** 통합 추천 코스 API 최상위 응답 (rank 순 코스 배열) */
 export interface RecommendationResponse {
-  status: string;
-  message: string;
-  data: {
-    recommended_courses: RecommendedCourse[];
-  };
+  daily_recommendations: RecommendedCourse[];
 }
 
 /**
@@ -63,16 +59,26 @@ export interface RecommendationResponse {
 export type SavedCourse = RecommendedCourse & { id: number };
 
 /**
- * 코스의 모든 장소를 지도 마커로 변환. daily_schedules를 순회하며 방문 순서대로 평탄화한다.
- * (실제 도보 경로 선은 후속 범위 — 지금은 좌표 마커만)
+ * 임시(경로 추천 디버깅용): 코스의 "출발지 → 도착지" 두 지점만 마커로 찍는다.
+ * - 출발지 = 코스의 맨 처음 지점(첫날 start_location)
+ * - 도착지 = 코스의 맨 마지막 지점(마지막 방문 장소)
+ * 경로 선(fetchCourseRouteLines)과 동일한 두 점을 사용한다.
  */
 export function courseToMarkers(
   course: RecommendedCourse,
 ): (LatLng & { label: string })[] {
-  return course.daily_schedules.flatMap((day) =>
-    day.places.map((place) => ({
-      ...toLatLng(place),
-      label: `${place.visit_order}. ${place.place_name}`,
-    })),
-  );
+  const points: (MapPoint & { name?: string; place_name?: string })[] =
+    course.daily_schedules.flatMap((day) => [day.start_location, ...day.places]);
+  const first = points[0];
+  const last = points[points.length - 1];
+  if (!first || !last || first === last) {
+    return [];
+  }
+
+  const nameOf = (p: (typeof points)[number]) =>
+    p.place_name ?? p.name ?? "";
+  return [
+    { ...toLatLng(first), label: `출발지${nameOf(first) ? ` · ${nameOf(first)}` : ""}` },
+    { ...toLatLng(last), label: `도착지${nameOf(last) ? ` · ${nameOf(last)}` : ""}` },
+  ];
 }
