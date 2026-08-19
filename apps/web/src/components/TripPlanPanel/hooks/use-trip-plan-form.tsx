@@ -3,9 +3,9 @@
 import { type ReactNode, useCallback, useState } from "react";
 
 import { addDays, formatISODate, type DateRange } from "@/components/Calendar";
+import type { Place } from "@/types/place";
 
 import { buildTripPlanPayload } from "../payload";
-import { MOCK_PLACES } from "../steps/mock-places";
 import { PlaceStep } from "../steps/PlaceStep";
 import { PurposeStep } from "../steps/PurposeStep";
 import { ScheduleStep } from "../steps/ScheduleStep";
@@ -54,8 +54,8 @@ export const useTripPlanForm = (): TripPlanForm => {
   const [purpose, setPurpose] = useState<string | null>(null);
   // 도보 선호도 (1~5)
   const [walkPreference, setWalkPreference] = useState<number | null>(null);
-  // 여행 일자별 선택 숙소 (인덱스 = n번째 날)
-  const [placeIds, setPlaceIds] = useState<(number | null)[]>([]);
+  // 여행 일자별 선택 숙소 (인덱스 = n번째 날). null이면 미선택.
+  const [selectedPlaces, setSelectedPlaces] = useState<(Place | null)[]>([]);
 
   // 여행 일수 및 일자 목록(시술 날짜 매칭 / 숙소 단계에서 사용)
   const dayCount = getDayCount(range);
@@ -82,10 +82,11 @@ export const useTripPlanForm = (): TripPlanForm => {
   const assignTreatmentDate = (name: string, date: string) =>
     setTreatmentDates((prev) => ({ ...prev, [name]: date }));
 
-  const selectPlace = (dayIndex: number, id: number) =>
-    setPlaceIds((prev) => {
+  // place가 null이면 해당 날의 선택을 취소한다.
+  const selectPlace = (dayIndex: number, place: Place | null) =>
+    setSelectedPlaces((prev) => {
       const next = [...prev];
-      next[dayIndex] = id;
+      next[dayIndex] = place;
       return next;
     });
 
@@ -103,7 +104,9 @@ export const useTripPlanForm = (): TripPlanForm => {
     {
       title: "시술 종류 선택",
       canNext: treatments.length > 0,
-      content: <TreatmentStep selected={treatments} onToggle={toggleTreatment} />,
+      content: (
+        <TreatmentStep selected={treatments} onToggle={toggleTreatment} />
+      ),
     },
     {
       title: "시술 날짜 선택",
@@ -117,17 +120,24 @@ export const useTripPlanForm = (): TripPlanForm => {
         />
       ),
     },
-    ...Array.from({ length: dayCount }, (_, i) => ({
-      title: `숙소 선택 (${i + 1}/${dayCount})`,
-      canNext: Boolean(placeIds[i]),
-      content: (
-        <PlaceStep
-          places={MOCK_PLACES}
-          selectedId={placeIds[i] ?? null}
-          onSelect={(id) => selectPlace(i, id)}
-        />
-      ),
-    })),
+    ...(dayCount > 0
+      ? [
+          {
+            title: "관광지 선택",
+            // 모든 날짜에 장소가 채워져야 다음으로
+            canNext: Array.from({ length: dayCount }).every((_, i) =>
+              Boolean(selectedPlaces[i]),
+            ),
+            content: (
+              <PlaceStep
+                days={tripDays}
+                selected={selectedPlaces}
+                onSelect={selectPlace}
+              />
+            ),
+          },
+        ]
+      : []),
     {
       title: "여행 주요 목적 선택",
       canNext: Boolean(purpose),
@@ -137,7 +147,10 @@ export const useTripPlanForm = (): TripPlanForm => {
       title: "도보 선호도 선택",
       canNext: walkPreference !== null,
       content: (
-        <WalkPreferenceStep value={walkPreference} onChange={setWalkPreference} />
+        <WalkPreferenceStep
+          value={walkPreference}
+          onChange={setWalkPreference}
+        />
       ),
     },
   ];
@@ -149,13 +162,14 @@ export const useTripPlanForm = (): TripPlanForm => {
     setTreatmentDates({});
     setPurpose(null);
     setWalkPreference(null);
-    setPlaceIds([]);
+    setSelectedPlaces([]);
   }, []);
 
   const buildPayload = () =>
     buildTripPlanPayload(
       range,
-      placeIds,
+      // 여행 일수만큼만 (기간 축소 시 남은 이전 선택 제외)
+      selectedPlaces.slice(0, dayCount).map((place) => place?.id ?? null),
       treatments,
       treatmentDates,
       purpose ?? "",
