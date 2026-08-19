@@ -11,5 +11,4 @@ import { fetchRecommendedCourses } from "@/lib/course";
 export const useRecommendCourses = () =>
   useMutation({
     mutationFn: fetchRecommendedCourses,
-    onSuccess: (res) => console.log(res),
   });
