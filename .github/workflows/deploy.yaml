@@ -31,6 +31,8 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build
+        env:
+          NEXT_PUBLIC_AI_API_URL: ${{ secrets.NEXT_PUBLIC_AI_API_URL }}
         run: pnpm turbo run build --filter=./apps/web
 
       - name: Package standalone output
