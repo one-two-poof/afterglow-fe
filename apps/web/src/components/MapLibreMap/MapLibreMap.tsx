@@ -7,6 +7,8 @@ import * as maplibregl from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import { useEffect, useRef } from "react";
 
+import type { RouteLine } from "@/lib/route";
+
 import { buildShadows } from "./shadows";
 
 // MapLibre 스타일이 정상 렌더되려면 CSS를 먼저 로드해야 함
@@ -37,7 +39,23 @@ export type MapMarker = LatLng & {
 
 type MapLibreMapProps = {
   markers?: MapMarker[];
+  /** 그릴 경로들 (shortest·shady 모두). shady는 빨강, 그 외 파랑 */
+  routeLines?: RouteLine[];
 };
+
+/** 경로들을 line 레이어용 GeoJSON FeatureCollection으로 변환 (shady를 속성으로) */
+function linesToFeatureCollection(
+  lines: RouteLine[],
+): GeoJSON.FeatureCollection<GeoJSON.LineString> {
+  return {
+    type: "FeatureCollection",
+    features: lines.map(({ coordinates, shady }) => ({
+      type: "Feature",
+      geometry: { type: "LineString", coordinates },
+      properties: { shady },
+    })),
+  };
+}
 
 // 디자인 토큰(@afterglow/tokens의 theme.css CSS 변수)을 런타임에 실제 색 문자열로 해석.
 // MapLibre paint는 var(--...) 를 못 쓰므로 getComputedStyle로 값을 읽어 넘긴다.
@@ -51,12 +69,17 @@ function readColorToken(name: string, fallback: string): string {
   return value || fallback;
 }
 
-export default function MapLibreMap({ markers = [] }: MapLibreMapProps) {
+export default function MapLibreMap({
+  markers = [],
+  routeLines = [],
+}: MapLibreMapProps) {
   const mapEl = useRef<HTMLDivElement>(null);
   // 마커 갱신 effect에서 지도 인스턴스에 접근하기 위해 ref로 보관
   const mapRef = useRef<maplibregl.Map | null>(null);
   // 현재 지도에 올라간 마커들 — markers prop이 바뀌면 걷어내고 다시 그린다
   const markerRefs = useRef<maplibregl.Marker[]>([]);
+  // 최신 routeLines를 load 핸들러(클로저)에서 읽기 위한 ref
+  const routeLinesRef = useRef<RouteLine[]>(routeLines);
 
   useEffect(() => {
     if (!mapEl.current) {
@@ -91,6 +114,12 @@ export default function MapLibreMap({ markers = [] }: MapLibreMapProps) {
         data: { type: "FeatureCollection", features: [] },
       });
 
+      // 코스 경로 line — 빈 소스로 시작, routeLines prop이 바뀔 때 setData
+      map.addSource("routes", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+
       // 디자인 토큰 기반 색상 (기존 하드코딩 색과 가장 유사한 토큰으로 매핑)
       const shadowColor = readColorToken("--color-secondary-900", "#1c2b45");
       const buildingColor = readColorToken("--color-neutral-600", "#5f6b78");
@@ -121,6 +150,31 @@ export default function MapLibreMap({ markers = [] }: MapLibreMapProps) {
           "fill-outline-color": buildingOutlineColor,
         },
       });
+
+      // 경로 line 레이어 (건물 위에 그려짐)
+      // shady 경로는 빨강, shortest 경로는 파랑
+      const shadyColor = readColorToken("--color-danger-500", "#ef4444");
+      const routeColor = readColorToken("--color-primary-500", "#3b82f6");
+      map.addLayer({
+        id: "routes-line",
+        type: "line",
+        source: "routes",
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": [
+            "case",
+            ["get", "shady"],
+            shadyColor,
+            routeColor,
+          ],
+          "line-width": 4,
+        },
+      });
+
+      // 최초 로드 시 이미 전달된 경로가 있으면 반영
+      map
+        .getSource<maplibregl.GeoJSONSource>("routes")
+        ?.setData(linesToFeatureCollection(routeLinesRef.current));
 
       // 뷰포트의 건물로 그림자를 계산해 shadows 소스에 반영
       const updateShadows = () => {
@@ -191,6 +245,26 @@ export default function MapLibreMap({ markers = [] }: MapLibreMapProps) {
       markerRefs.current = [];
     };
   }, [markers]);
+
+  // routeLines가 바뀌면 line 소스를 갱신. 소스는 스타일 로드 후 생기므로,
+  // 아직이면 idle 시점에 반영(또는 load 핸들러가 routeLinesRef로 최초 반영).
+  useEffect(() => {
+    routeLinesRef.current = routeLines;
+    const map = mapRef.current;
+    if (!map) {
+      return;
+    }
+    const apply = () => {
+      map
+        .getSource<maplibregl.GeoJSONSource>("routes")
+        ?.setData(linesToFeatureCollection(routeLinesRef.current));
+    };
+    if (map.getSource("routes")) {
+      apply();
+    } else {
+      map.once("idle", apply);
+    }
+  }, [routeLines]);
 
   return <div ref={mapEl} className="h-full w-full" />;
 }
