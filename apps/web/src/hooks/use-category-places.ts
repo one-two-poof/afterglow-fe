@@ -16,6 +16,9 @@ const FETCHERS: Record<PlaceCategory, (name?: string) => Promise<Place[]>> = {
   attraction: fetchAttractions,
 };
 
+// 병원·관광명소·숙소는 거의 변하지 않으므로 하루 동안 캐시를 신선하게 유지 (재요청 최소화)
+const ONE_DAY_MS = 1000 * 60 * 60 * 24;
+
 /**
  * 선택한 카테고리의 장소 목록을 조회한다.
  * category가 null("전체")이면 요청하지 않는다.
@@ -25,4 +28,6 @@ export const useCategoryPlaces = (category: PlaceCategory | null) =>
     queryKey: ["places", "category", category],
     queryFn: () => FETCHERS[category!](),
     enabled: category !== null,
+    staleTime: ONE_DAY_MS,
+    gcTime: ONE_DAY_MS,
   });

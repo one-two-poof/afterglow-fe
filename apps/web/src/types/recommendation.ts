@@ -106,3 +106,20 @@ export function courseToMarkers(
     { ...toLatLng(last), label: `도착지${nameOf(last) ? ` · ${nameOf(last)}` : ""}` },
   ];
 }
+
+/**
+ * 저장된 코스(SavedCourse)의 모든 지점을 마커로.
+ * 각 날의 출발지 + 방문 장소 전체를 이름 라벨과 함께 반환한다.
+ * (TODO: from/to 경로 API 연동 시 마커 대신/함께 경로선도 그림)
+ */
+export function savedCourseToMarkers(
+  course: SavedCourse,
+): (LatLng & { label: string })[] {
+  return course.daily_schedules.flatMap((day) => [
+    { ...toLatLng(day.start_location), label: day.start_location.name },
+    ...day.places.map((place) => ({
+      ...toLatLng(place),
+      label: place.placeName,
+    })),
+  ]);
+}
