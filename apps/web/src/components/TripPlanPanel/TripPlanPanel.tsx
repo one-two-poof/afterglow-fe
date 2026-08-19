@@ -15,9 +15,12 @@ import {
 import { createPortal } from "react-dom";
 
 import { addDays, formatISODate, type DateRange } from "@/components/Calendar";
+import { useAdoptedCoursesStore } from "@/stores/adopted-courses-store";
+import type { RecommendedCourse } from "@/types/recommendation";
 
 import { PlaceStep, type Place } from "./PlaceStep";
 import { PurposeStep } from "./PurposeStep";
+import { ResultStep } from "./ResultStep";
 import { ScheduleStep } from "./ScheduleStep";
 import { TreatmentDateStep } from "./TreatmentDateStep";
 import { TreatmentStep } from "./TreatmentStep";
@@ -35,7 +38,7 @@ const getDayCount = ({ start, end }: DateRange) =>
 // TODO: 실제 추천 숙소 API 연동 시 교체 (lat/lon 포함해 내려받기)
 const MOCK_PLACES: Place[] = [
   {
-    id: "dormy",
+    id: 7,
     category: "숙소",
     name: "도미인 서울 강남",
     address: "서울 서초구 강남대로 415",
@@ -43,12 +46,77 @@ const MOCK_PLACES: Place[] = [
     lon: 127.026,
   },
   {
-    id: "uandi",
+    id: 5,
     category: "숙소",
     name: "유앤아이 호텔 강남점",
     address: "서울 서초구 강남대로 421",
     lat: 37.503,
     lon: 127.024,
+  },
+];
+
+// TODO: 실제 ML ① 추천 API 호출(POST TripPlanPayload → recommended_courses)로 교체.
+// 지금은 결과 단계 UI 검증용 목업. mapX=경도/mapY=위도 (toLatLng 기준).
+const getMockRecommendations = (
+  _payload: TripPlanPayload,
+): RecommendedCourse[] => [
+  {
+    rank: 1,
+    course_id: "C00001",
+    total_distance_km: 8.4,
+    treatment: [{ name: "리프팅", date: "2026-06-08" }],
+    daily_schedules: [
+      {
+        date: "2026-06-07",
+        start_location: { name: "도미인 서울 강남", mapX: 127.026, mapY: 37.5 },
+        places: [
+          {
+            visit_order: 1,
+            place_name: "봉은사",
+            place_category: "명소",
+            mapX: 127.058,
+            mapY: 37.515,
+            is_indoor: 0,
+            walk_hard: 2,
+            dist_to_prev_km: 0,
+          },
+          {
+            visit_order: 2,
+            place_name: "스타필드 코엑스몰",
+            place_category: "쇼핑",
+            mapX: 127.059,
+            mapY: 37.512,
+            is_indoor: 1,
+            walk_hard: 1,
+            dist_to_prev_km: 0.4,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    rank: 2,
+    course_id: "C00002",
+    total_distance_km: 12.1,
+    treatment: [{ name: "리프팅", date: "2026-06-08" }],
+    daily_schedules: [
+      {
+        date: "2026-06-07",
+        start_location: { name: "도미인 서울 강남", mapX: 127.026, mapY: 37.5 },
+        places: [
+          {
+            visit_order: 1,
+            place_name: "가로수길",
+            place_category: "명소",
+            mapX: 127.023,
+            mapY: 37.52,
+            is_indoor: 0,
+            walk_hard: 3,
+            dist_to_prev_km: 0,
+          },
+        ],
+      },
+    ],
   },
 ];
 
@@ -58,8 +126,7 @@ const MOCK_PLACES: Place[] = [
  */
 const buildTripPlanPayload = (
   range: DateRange,
-  placeIds: (string | null)[],
-  places: Place[],
+  placeIds: (number | null)[],
   treatments: string[],
   treatmentDates: Record<string, string>,
   userPurpose: string,
@@ -72,15 +139,12 @@ const buildTripPlanPayload = (
 
   const daily_starts: TripPlanPayload["daily_starts"] = [];
   placeIds.forEach((id, i) => {
-    const place = id ? places.find((p) => p.id === id) : undefined;
-    if (!place) {
+    if (id === null) {
       return;
     }
     daily_starts.push({
       date: formatISODate(addDays(start, i)),
-      start_name: place.name,
-      start_lat: place.lat,
-      start_lon: place.lon,
+      start_id: id,
     });
   });
 
@@ -129,7 +193,18 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
   // 도보 선호도 (1~5)
   const [walkPreference, setWalkPreference] = useState<number | null>(null);
   // 여행 일자별 선택 숙소 (인덱스 = n번째 날)
-  const [placeIds, setPlaceIds] = useState<(string | null)[]>([]);
+  const [placeIds, setPlaceIds] = useState<(number | null)[]>([]);
+
+  // 국면: 폼 작성 → 제출 후 결과(rank 브라우징)
+  const [phase, setPhase] = useState<"form" | "result">("form");
+  // ML ①이 준 추천 코스들 (rank 순)
+  const [recommendations, setRecommendations] = useState<RecommendedCourse[]>(
+    [],
+  );
+  // 현재 보고 있는 rank 인덱스 (건너뛰기로 증가)
+  const [rankIndex, setRankIndex] = useState(0);
+  const adoptCourse = useAdoptedCoursesStore((s) => s.adopt);
+
   const panelRef = useRef<HTMLDivElement>(null);
   const backRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
@@ -142,6 +217,9 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
     setPurpose(null);
     setWalkPreference(null);
     setPlaceIds([]);
+    setPhase("form");
+    setRecommendations([]);
+    setRankIndex(0);
     onClose();
   }, [onClose]);
 
@@ -197,7 +275,7 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
   const assignTreatmentDate = (name: string, date: string) =>
     setTreatmentDates((prev) => ({ ...prev, [name]: date }));
 
-  const selectPlace = (dayIndex: number, id: string) =>
+  const selectPlace = (dayIndex: number, id: number) =>
     setPlaceIds((prev) => {
       const next = [...prev];
       next[dayIndex] = id;
@@ -261,7 +339,15 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
   const isFirst = step === 0;
   const isLast = step === steps.length - 1;
 
+  // 현재 결과 단계에서 보고 있는 코스 (모두 건너뛰면 undefined)
+  const currentCourse = recommendations[rankIndex];
+
   const handleBack = () => {
+    if (phase === "result") {
+      // 결과 → 폼(마지막 단계)로 복귀
+      setPhase("form");
+      return;
+    }
     if (isFirst) {
       handleClose();
     } else {
@@ -278,7 +364,6 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
     const payload = buildTripPlanPayload(
       range,
       placeIds,
-      MOCK_PLACES,
       treatments,
       treatmentDates,
       purpose ?? "",
@@ -287,9 +372,25 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
     if (!payload) {
       return;
     }
-    // TODO: 실제 제출 API 연동 (현재는 페이로드 형태 확인용 로그)
-    console.log("[TripPlan] submit payload", payload);
+    // TODO: 실제 ML ① 추천 API 호출로 교체 (현재는 목업)
+    const courses = getMockRecommendations(payload);
+    setRecommendations(courses);
+    setRankIndex(0);
+    setPhase("result");
   };
+
+  // 결과 단계: 현재 코스 채택 → "내 코스"에 담고 패널 종료
+  const handleAdopt = () => {
+    if (!currentCourse) {
+      return;
+    }
+    adoptCourse(currentCourse);
+    // TODO: ② 저장 API 호출 (선정 코스의 daily_schedules 전송 → 서버 영속화)
+    handleClose();
+  };
+
+  // 결과 단계: 건너뛰기 → 다음 rank
+  const handleSkip = () => setRankIndex((prev) => prev + 1);
 
   // 패널 내부로 포커스 가두기(Tab 순환)
   const handleTrap = (e: KeyboardEvent) => {
@@ -347,14 +448,20 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
           <button
             ref={backRef}
             type="button"
-            aria-label={isFirst ? "홈으로 닫기" : "이전 단계"}
+            aria-label={
+              phase === "result"
+                ? "이전으로"
+                : isFirst
+                  ? "홈으로 닫기"
+                  : "이전 단계"
+            }
             onClick={handleBack}
             className="-ml-1 rounded-full p-1 text-text hover:bg-surface-muted focus-visible:ring-2 focus-visible:ring-border-focus focus-visible:outline-none"
           >
             <ArrowLeft size={22} />
           </button>
           <h2 id={titleId} className="text-heading-sm text-text">
-            {current.title}
+            {phase === "result" ? "추천 코스" : current.title}
           </h2>
           {/* TODO: 프로필 아바타 연결 (현재 placeholder) */}
           <span
@@ -365,18 +472,71 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
           </span>
         </header>
 
-        <div className="flex-1 overflow-y-auto px-4 pb-4">{current.content}</div>
+        <div className="flex-1 overflow-y-auto px-4 pb-4">
+          {phase === "result" ? (
+            currentCourse ? (
+              <ResultStep
+                course={currentCourse}
+                index={rankIndex}
+                total={recommendations.length}
+              />
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
+                <p className="text-body-md text-text">
+                  추천 코스를 모두 확인했어요
+                </p>
+                <p className="text-body-sm text-text-muted">
+                  마음에 드는 코스가 없으면 조건을 바꿔 다시 시도해보세요.
+                </p>
+              </div>
+            )
+          ) : (
+            current.content
+          )}
+        </div>
 
         <footer className="border-t border-border px-4 py-3">
-          <Button
-            variant="primary"
-            size="lg"
-            className="w-full"
-            disabled={!current.canNext}
-            onClick={handleNext}
-          >
-            {isLast ? "코스 추천 받기 ✨" : "다음 단계로"}
-          </Button>
+          {phase === "result" ? (
+            currentCourse ? (
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  className="flex-1"
+                  onClick={handleSkip}
+                >
+                  건너뛰기
+                </Button>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  className="flex-1"
+                  onClick={handleAdopt}
+                >
+                  이 코스 채택
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="primary"
+                size="lg"
+                className="w-full"
+                onClick={handleClose}
+              >
+                닫기
+              </Button>
+            )
+          ) : (
+            <Button
+              variant="primary"
+              size="lg"
+              className="w-full"
+              disabled={!current.canNext}
+              onClick={handleNext}
+            >
+              {isLast ? "코스 추천 받기 ✨" : "다음 단계로"}
+            </Button>
+          )}
         </footer>
       </div>
     </div>,

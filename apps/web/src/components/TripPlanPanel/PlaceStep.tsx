@@ -5,12 +5,13 @@ import { useMemo, useState } from "react";
 import { PlaceCard } from "@/components/PlaceCard";
 
 export interface Place {
-  id: string;
+  /** 병원·숙소 데이터 아이디 (제출 시 daily_starts[].start_id) */
+  id: number;
   name: string;
   address: string;
-  /** 위도 (제출 시 start_lat) */
+  /** 위도 (지도 마커용) */
   lat: number;
-  /** 경도 (제출 시 start_lon) */
+  /** 경도 (지도 마커용) */
   lon: number;
   category?: string;
   imageUrl?: string;
@@ -18,8 +19,8 @@ export interface Place {
 
 export interface PlaceStepProps {
   places: Place[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
+  selectedId: number | null;
+  onSelect: (id: number) => void;
 }
 
 /** 2단계: 숙소(또는 병원 등) 선택 */
