@@ -18,5 +18,5 @@ export async function fetchRecommendedCourses(
     "/api/course",
     payload,
   );
-  return data.data.recommended_courses;
+  return data.daily_recommendations;
 }

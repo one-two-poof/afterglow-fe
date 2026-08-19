@@ -317,7 +317,7 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
     if (!payload) {
       return;
     }
-    // ML ① 추천 API 호출 (POST /api/course → recommended_courses)
+    // ML ① 추천 API 호출 (POST /api/course → daily_recommendations)
     recommendMutation.mutate(payload, {
       onSuccess: () => {
         setRankIndex(0);

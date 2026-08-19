@@ -47,13 +47,9 @@ export interface RecommendedCourse {
   daily_schedules: DailySchedule[];
 }
 
-/** 통합 추천 코스 API 최상위 응답 */
+/** 통합 추천 코스 API 최상위 응답 (rank 순 코스 배열) */
 export interface RecommendationResponse {
-  status: string;
-  message: string;
-  data: {
-    recommended_courses: RecommendedCourse[];
-  };
+  daily_recommendations: RecommendedCourse[];
 }
 
 /**
