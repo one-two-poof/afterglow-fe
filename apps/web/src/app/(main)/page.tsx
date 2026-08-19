@@ -214,10 +214,7 @@ export default function Home() {
   // 코스 선택 시 경로 API로 구간별 경로를 받아 그린다. 선택 해제 시 비운다.
   const [routeLines, setRouteLines] = useState<RouteLine[]>([]);
   useEffect(() => {
-    if (!selectedCourse) {
-      setRouteLines([]);
-      return;
-    }
+    if (!selectedCourse) return;
     let cancelled = false;
     fetchCourseRouteLines(selectedCourse)
       .then((lines) => {
@@ -231,8 +228,10 @@ export default function Home() {
           setRouteLines([]);
         }
       });
+    // 선택 해제/코스 전환 시 이전 경로를 비운다.
     return () => {
       cancelled = true;
+      setRouteLines([]);
     };
   }, [selectedCourse]);
 
