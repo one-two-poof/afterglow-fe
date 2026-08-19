@@ -2,6 +2,7 @@
 
 // maplibre-gl v5 사용: v6는 워커를 별도 ES 모듈(maplibre-gl-worker.mjs)로 분리하는데
 // Next.js 번들러가 이 워커 청크를 서빙하지 못해 404 → 지도가 로드되지 않음
+import type { LatLng } from "@afterglow/utils";
 import * as maplibregl from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import { useEffect, useRef } from "react";
@@ -25,6 +26,19 @@ const BUILDINGS_PMTILES_URL =
 // pmtiles 소스가 참조하는 vector layer id (pmtiles 메타데이터의 vector_layers[].id)
 const BUILDINGS_SOURCE_LAYER = "buildings";
 
+// 마커로 찍을 장소. MapLibre는 [lng, lat] 순서를 쓰지만, 순서 혼동을 막기 위해
+// 튜플이 아니라 명시적 { lat, lng } 객체(utils의 LatLng)로 받는다 (내부에서 [lng, lat]로 변환).
+// toLatLng() 결과가 그대로 흘러들 수 있게 LatLng을 확장.
+// Source: https://maplibre.org/maplibre-gl-js/docs/API/classes/Marker/ (setLngLat)
+export type MapMarker = LatLng & {
+  // 팝업에 표시할 장소명(선택). 예: "OO 백화점"
+  label?: string;
+};
+
+type MapLibreMapProps = {
+  markers?: MapMarker[];
+};
+
 // 디자인 토큰(@afterglow/tokens의 theme.css CSS 변수)을 런타임에 실제 색 문자열로 해석.
 // MapLibre paint는 var(--...) 를 못 쓰므로 getComputedStyle로 값을 읽어 넘긴다.
 function readColorToken(name: string, fallback: string): string {
@@ -37,8 +51,12 @@ function readColorToken(name: string, fallback: string): string {
   return value || fallback;
 }
 
-export default function MapLibreMap() {
+export default function MapLibreMap({ markers = [] }: MapLibreMapProps) {
   const mapEl = useRef<HTMLDivElement>(null);
+  // 마커 갱신 effect에서 지도 인스턴스에 접근하기 위해 ref로 보관
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  // 현재 지도에 올라간 마커들 — markers prop이 바뀌면 걷어내고 다시 그린다
+  const markerRefs = useRef<maplibregl.Marker[]>([]);
 
   useEffect(() => {
     if (!mapEl.current) {
@@ -57,6 +75,7 @@ export default function MapLibreMap() {
       center: [126.978, 37.5665], // [lng, lat] 서울시청
       zoom: 15,
     });
+    mapRef.current = map;
 
     // 배경 스타일 로드 완료 후 건물 소스/레이어를 추가
     // Source: https://maplibre.org/maplibre-gl-js/docs/ (addSource/addLayer)
@@ -125,10 +144,53 @@ export default function MapLibreMap() {
     });
 
     return () => {
+      mapRef.current = null;
       map.remove();
       maplibregl.removeProtocol("pmtiles");
     };
   }, []);
+
+  // markers prop이 바뀔 때마다 기존 마커를 걷어내고 새로 그린다.
+  // Marker는 DOM 오버레이라 스타일 로드 여부와 무관하게 Map 생성 직후 추가 가능.
+  // Source: https://maplibre.org/maplibre-gl-js/docs/API/classes/Marker/ (addTo/remove)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) {
+      return;
+    }
+
+    for (const marker of markerRefs.current) {
+      marker.remove();
+    }
+
+    markerRefs.current = markers.map(({ lat, lng, label }) => {
+      const marker = new maplibregl.Marker()
+        // { lat, lng }를 MapLibre가 요구하는 [lng, lat] 순서로 변환
+        .setLngLat([lng, lat])
+        .addTo(map);
+      if (label) {
+        marker.setPopup(new maplibregl.Popup().setText(label));
+      }
+      return marker;
+    });
+
+    // 마커가 있으면 전부 보이도록 뷰포트를 맞춘다(코스 Tag 클릭 시 해당 코스로 이동).
+    // Source: https://maplibre.org/maplibre-gl-js/docs/API/classes/Map/#fitbounds
+    if (markers.length > 0) {
+      const bounds = markers.reduce(
+        (acc, { lat, lng }) => acc.extend([lng, lat]),
+        new maplibregl.LngLatBounds(),
+      );
+      map.fitBounds(bounds, { padding: 64, maxZoom: 16, duration: 600 });
+    }
+
+    return () => {
+      for (const marker of markerRefs.current) {
+        marker.remove();
+      }
+      markerRefs.current = [];
+    };
+  }, [markers]);
 
   return <div ref={mapEl} className="h-full w-full" />;
 }

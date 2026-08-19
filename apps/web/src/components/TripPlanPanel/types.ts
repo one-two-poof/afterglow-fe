@@ -3,9 +3,8 @@
 export interface DailyStart {
   /** "YYYY-MM-DD" */
   date: string;
-  start_name: string;
-  start_lat: number;
-  start_lon: number;
+  /** 병원·숙소 데이터 아이디 (출발점) */
+  start_id: number;
 }
 
 export interface TreatmentSelection {
