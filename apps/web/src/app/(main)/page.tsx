@@ -1,6 +1,8 @@
 "use client";
 
 import { MapLibreMap, TripPlanPanel } from "@/components";
+import { useDebounce } from "@/hooks/use-debounce";
+import { usePlaces } from "@/hooks/use-places";
 import { getAccessToken } from "@/lib/auth";
 import { fetchCourseRouteLines, type RouteLine } from "@/lib/route";
 import { useAdoptedCoursesStore } from "@/stores/adopted-courses-store";
@@ -192,8 +194,37 @@ export default function Home() {
   const router = useRouter();
   // 선택된 태그(카테고리 값 또는 채택 코스의 course_id)
   const [filter, setFilter] = useState("all");
-  // TODO: 추후 검색 구현 시 Input value x 구현
   const [planOpen, setPlanOpen] = useState(false);
+
+  // 장소 검색: 입력값을 300ms 디바운스해 요청. 빈 문자열이면 요청하지 않음.
+  const [search, setSearch] = useState("");
+  // 드롭다운 열림 여부. 검색어와 분리해, 결과 선택 시 닫아 재요청을 막는다.
+  const [searchOpen, setSearchOpen] = useState(false);
+  const debouncedSearch = useDebounce(search, 300);
+  // 선택으로 닫힌 상태(searchOpen=false)에서는 요청하지 않는다.
+  const searchEnabled = searchOpen && debouncedSearch.trim() !== "";
+  const { data: searchResults = [], isFetching: isSearching } = usePlaces(
+    debouncedSearch,
+    { enabled: searchEnabled },
+  );
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setSearchOpen(true);
+  };
+
+  const clearSearch = () => {
+    setSearch("");
+    setSearchOpen(false);
+  };
+
+  // 결과 선택: 입력값만 그 장소명으로 바꾸고, 드롭다운을 닫아 재요청을 막는다.
+  const selectPlace = (placeName: string) => {
+    setSearch(placeName);
+    setSearchOpen(false);
+  };
+
+  const showSearchResults = searchOpen && search.trim() !== "";
 
   // "내 코스" — 페이지 로드 시 GET으로 하이드레이트 예정(현재는 채택으로만 채워짐)
   const courses = useAdoptedCoursesStore((s) => s.courses);
@@ -247,13 +278,55 @@ export default function Home() {
   return (
     <div className="relative h-full">
       <MapLibreMap markers={markers} routeLines={routeLines} />
-      <Input
-        className="absolute top-4 left-1/2 w-[95%] -translate-x-1/2"
-        placeholder="병원 또는 관광지를 검색해보세요"
-        leftIcon={<Search size={18} />}
-        rightIcon={<X size={18} />}
-        size="lg"
-      />
+      <div className="absolute top-4 left-1/2 z-20 w-[95%] -translate-x-1/2">
+        <Input
+          className="w-full"
+          placeholder="병원 또는 관광지를 검색해보세요"
+          aria-label="장소 검색"
+          value={search}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          leftIcon={<Search size={18} />}
+          rightIcon={
+            search ? (
+              <button
+                type="button"
+                aria-label="검색어 지우기"
+                onClick={clearSearch}
+                className="flex items-center text-text-muted hover:text-text focus-visible:outline-none"
+              >
+                <X size={18} />
+              </button>
+            ) : undefined
+          }
+          size="lg"
+        />
+
+        {showSearchResults && (
+          <ul className="mt-2 max-h-64 overflow-y-auto rounded-[8px] border border-border bg-neutral-0 shadow-md">
+            {searchResults.length > 0 ? (
+              searchResults.map((place) => (
+                <li key={place.id} className="border-b border-border last:border-b-0">
+                  <button
+                    type="button"
+                    onClick={() => selectPlace(place.placeName)}
+                    className="w-full px-4 py-3 text-left text-body-sm text-text hover:bg-surface-muted focus-visible:bg-surface-muted focus-visible:outline-none"
+                  >
+                    {place.placeName}
+                  </button>
+                </li>
+              ))
+            ) : isSearching ? (
+              <li className="px-4 py-3 text-body-sm text-text-muted">
+                검색 중…
+              </li>
+            ) : (
+              <li className="px-4 py-3 text-body-sm text-text-muted">
+                검색 결과가 없습니다.
+              </li>
+            )}
+          </ul>
+        )}
+      </div>
 
       <TagList
         value={filter}
