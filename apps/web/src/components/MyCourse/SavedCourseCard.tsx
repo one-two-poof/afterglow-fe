@@ -35,12 +35,15 @@ export const SavedCourseCard = ({ course }: { course: SavedCourse }) => (
             </p>
           </div>
           <ol className="mt-2 flex flex-col gap-1">
-            {day.places.map((place, i) => (
-              <li key={`${place.id}-${i}`} className="text-body-sm text-text">
-                <span className="text-text-muted">{i + 1}.</span>{" "}
-                {place.placeName}
-                {place.categoryName && (
-                  <span className="text-text-muted"> · {place.categoryName}</span>
+            {day.places.map((place) => (
+              <li key={place.visit_order} className="text-body-sm text-text">
+                <span className="text-text-muted">{place.visit_order}.</span>{" "}
+                {place.place_name}
+                {place.place_category && (
+                  <span className="text-text-muted">
+                    {" · "}
+                    {place.place_category}
+                  </span>
                 )}
               </li>
             ))}

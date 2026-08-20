@@ -5,10 +5,17 @@
  * 구조: recommended_courses[] = rank별 "완성된 다일(多日) 일정" 하나.
  * 각 코스는 daily_schedules[](날짜별)를 품는다. 사용자는 rank 단위로 통째로 채택/스킵.
  *
- * 좌표(mapX/mapY)는 @afterglow/utils 의 MapPoint/toLatLng 로 지도 좌표(lat/lng)로 변환.
+ * ⚠️ 좌표 규약: 코스 데이터(추천·저장)는 mapX=위도(lat), mapY=경도(lng)로 온다.
+ * 이는 장소 API(/api/places, mapX=lng)의 toLatLng 규약과 반대이므로,
+ * 코스 좌표는 아래 courseToLatLng로 변환한다(toLatLng를 쓰지 않음).
  */
-import type { Place } from "@/types/place";
-import { toLatLng, type LatLng, type MapPoint } from "@afterglow/utils";
+import type { LatLng, MapPoint } from "@afterglow/utils";
+
+/** 코스 좌표(mapX=위도/mapY=경도) → 지도 좌표(lat/lng) */
+const courseToLatLng = (point: MapPoint): LatLng => ({
+  lat: point.mapX,
+  lng: point.mapY,
+});
 
 /** 코스에 포함된 개별 장소 (방문 순서대로) */
 export interface RecommendedPlace extends MapPoint {
@@ -54,32 +61,15 @@ export interface RecommendationResponse {
 }
 
 /**
- * 저장된 코스의 하루 일정.
- * places가 전체 Place 엔티티다 (추천 응답의 RecommendedPlace와 다름).
- */
-export interface SavedDailySchedule {
-  /** "YYYY-MM-DD" */
-  date: string;
-  /** 그날의 출발지(숙소·병원 등) */
-  start_location: MapPoint & { name: string };
-  places: Place[];
-}
-
-/**
  * GET /api/recommendations 응답 아이템 (저장된 "내 코스").
- * 추천 코스와 유사하나 selectionId/selectedAt이 붙고,
- * daily_schedules[].places가 전체 Place 엔티티다.
+ * 구조는 추천 코스(RecommendedCourse)와 동일하고 selectionId/selectedAt만 추가된다.
+ * (daily_schedules[].places도 추천과 같은 RecommendedPlace 형태 — place_name 등)
  */
-export interface SavedCourse {
+export interface SavedCourse extends RecommendedCourse {
   /** 저장 선택 식별자 (서버 부여) */
   selectionId: number;
   /** 저장 시각 (ISO 8601) */
   selectedAt: string;
-  rank: number;
-  course_id: string;
-  total_distance_km: number;
-  treatment: { name: string; date: string }[];
-  daily_schedules: SavedDailySchedule[];
 }
 
 /**
@@ -102,8 +92,8 @@ export function courseToMarkers(
   const nameOf = (p: (typeof points)[number]) =>
     p.place_name ?? p.name ?? "";
   return [
-    { ...toLatLng(first), label: `출발지${nameOf(first) ? ` · ${nameOf(first)}` : ""}` },
-    { ...toLatLng(last), label: `도착지${nameOf(last) ? ` · ${nameOf(last)}` : ""}` },
+    { ...courseToLatLng(first), label: `출발지${nameOf(first) ? ` · ${nameOf(first)}` : ""}` },
+    { ...courseToLatLng(last), label: `도착지${nameOf(last) ? ` · ${nameOf(last)}` : ""}` },
   ];
 }
 
@@ -116,10 +106,10 @@ export function savedCourseToMarkers(
   course: SavedCourse,
 ): (LatLng & { label: string })[] {
   return course.daily_schedules.flatMap((day) => [
-    { ...toLatLng(day.start_location), label: day.start_location.name },
+    { ...courseToLatLng(day.start_location), label: day.start_location.name },
     ...day.places.map((place) => ({
-      ...toLatLng(place),
-      label: place.placeName,
+      ...courseToLatLng(place),
+      label: place.place_name,
     })),
   ]);
 }

@@ -1,4 +1,4 @@
-import { Footer } from "@/components";
+import { Footer, Toast } from "@/components";
 import { ReactNode } from "react";
 
 const MainLayout = ({ children }: { children: ReactNode }) => {
@@ -10,6 +10,7 @@ const MainLayout = ({ children }: { children: ReactNode }) => {
       >
         <main className="flex-1">{children}</main>
         <Footer />
+        <Toast />
       </div>
     </div>
   );

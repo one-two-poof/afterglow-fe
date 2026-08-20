@@ -6,7 +6,9 @@ import { ArrowLeft } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { useCourseSelection } from "@/hooks/use-course-selection";
 import { useAdoptedCoursesStore } from "@/stores/adopted-courses-store";
+import { useToastStore } from "@/stores/toast-store";
 
 import { useFocusTrap } from "./hooks/use-focus-trap";
 import { useIsMounted } from "./hooks/use-is-mounted";
@@ -41,6 +43,8 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
   const { reset: resetRecommend } = recommendMutation;
 
   const adoptCourse = useAdoptedCoursesStore((s) => s.adopt);
+  const courseSelection = useCourseSelection();
+  const showToast = useToastStore((s) => s.show);
 
   const panelRef = useRef<HTMLDivElement>(null);
   const backRef = useRef<HTMLButtonElement>(null);
@@ -130,8 +134,12 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
     if (!currentCourse) {
       return;
     }
+    // 코스 선택 저장 (POST /api/course-selection)
+    courseSelection.mutate(Number(currentCourse.course_id), {
+      onSuccess: () => showToast("코스를 저장했어요"),
+      onError: () => showToast("코스 저장에 실패했어요"),
+    });
     adoptCourse(currentCourse);
-    // TODO: ② 저장 API 호출 (선정 코스의 daily_schedules 전송 → 서버 영속화)
     handleClose();
   };
 
