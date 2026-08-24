@@ -1,30 +1,42 @@
-import { Pressable, Text, View } from "react-native";
+import { cn } from "@afterglow/utils";
+import { ActivityIndicator, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useUsers } from "@/hooks/use-users";
+
 /**
- * PR 1 검증 화면.
+ * 홈 화면 + PR 2 인프라 검증.
  *
- * 모든 스타일을 StyleSheet 대신 NativeWind className으로 지정했다. 색(bg-bg,
- * text-text-secondary, bg-primary 등)과 타이포(text-heading-md, text-body-sm 등)
- * 클래스가 `@afterglow/tokens` 값으로 실제 렌더되면 토큰 연결이 성공한 것.
+ * `useUsers`(react-query + @afterglow/api) 결과를 표시해 워크스페이스 의존 연결,
+ * Provider, 서버 상태 흐름이 앱에서 동작함을 확인한다. `cn`(@afterglow/utils)으로
+ * 상태별 색 클래스를 합성한다.
  */
 export default function HomeScreen() {
+  const { data: users, isPending, isError, error } = useUsers();
+
   return (
     <SafeAreaView className="flex-1 bg-bg">
       <View className="flex-1 items-center justify-center gap-4 px-6">
         <Text className="text-heading-md text-text">Hello afterglow 👋</Text>
-        <Text className="text-body-sm text-text-secondary text-center">
-          NativeWind + 디자인 토큰 연결 확인 — 이 텍스트/버튼 색이 토큰에서 온다.
-        </Text>
 
-        <Pressable className="mt-2 rounded-xl bg-primary px-5 py-3 active:bg-action-primary-hover">
-          <Text className="text-label-lg text-on-action-primary">
-            Primary 버튼
+        <View className="items-center gap-1">
+          <Text className="text-label-sm text-text-muted">
+            react-query + @afterglow/api 검증
           </Text>
-        </Pressable>
-
-        <View className="mt-2 rounded-lg border border-border-accent bg-surface-accent px-4 py-2">
-          <Text className="text-body-xs text-primary-700">surface-accent 배지</Text>
+          {isPending ? (
+            <ActivityIndicator />
+          ) : (
+            <Text
+              className={cn(
+                "text-body-sm",
+                isError ? "text-error" : "text-success-700",
+              )}
+            >
+              {isError
+                ? `에러: ${error.message}`
+                : `유저 ${users.length}명 로드 성공`}
+            </Text>
+          )}
         </View>
       </View>
     </SafeAreaView>

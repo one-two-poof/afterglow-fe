@@ -49,7 +49,7 @@ packages/
 
 - [x] **PR 0. 전환 기반**: 이 로드맵 문서 + PR 템플릿(퀴즈 섹션) + `apps/mobile` Expo 스캐폴드(expo-router, 빈 화면 3개 탭 없이 홈만). 시뮬레이터에서 "Hello afterglow" 부팅 확인.
 - [x] **PR 1. 디자인 토큰 TS export**: `packages/tokens`에 `src/index.ts` 추가 — theme.css의 색/타이포 값을 TS 객체로 제공. NativeWind 설정을 mobile에 연결하고 토큰이 클래스로 동작하는지 확인.
-- [ ] **PR 2. 공통 인프라**: mobile에 axios 인스턴스, react-query Provider, 환경변수(EXPO_PUBLIC_*) 연결. `@afterglow/api`, `@afterglow/types`, `@afterglow/utils` 워크스페이스 의존 연결 확인.
+- [x] **PR 2. 공통 인프라**: mobile에 axios 인스턴스, react-query Provider, 환경변수(EXPO_PUBLIC_*) 연결. `@afterglow/api`, `@afterglow/types`, `@afterglow/utils` 워크스페이스 의존 연결 확인.
 
 ### Phase 1 — 공용 UI 컴포넌트 (`packages/ui-native`)
 
