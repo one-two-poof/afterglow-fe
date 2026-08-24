@@ -11,7 +11,11 @@ const nativewindPreset = require("nativewind/preset");
  * 생성되는 클래스 이름(bg-primary-600, text-body-md 등)은 동일하다.
  */
 const config = {
-  content: ["./src/**/*.{ts,tsx}"],
+  content: [
+    "./src/**/*.{ts,tsx}",
+    // 공용 RN 컴포넌트(@afterglow/ui-native)의 className도 스캔해야 스타일이 생성된다.
+    "../../packages/ui-native/src/**/*.{ts,tsx}",
+  ],
   presets: [nativewindPreset],
   theme: {
     extend: {

@@ -1,0 +1,29 @@
+{
+  "name": "@afterglow/ui-native",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@afterglow/tokens": "workspace:*",
+    "@afterglow/utils": "workspace:*"
+  },
+  "peerDependencies": {
+    "nativewind": "*",
+    "react": "*",
+    "react-native": "*"
+  },
+  "devDependencies": {
+    "@afterglow/typescript-config": "workspace:*",
+    "@types/react": "~19.2.2",
+    "nativewind": "^4.2.6",
+    "react": "19.2.3",
+    "react-native": "0.86.2",
+    "tailwindcss": "^3.4.19",
+    "typescript": "~6.0.3"
+  }
+}
