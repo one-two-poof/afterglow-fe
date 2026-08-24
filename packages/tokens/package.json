@@ -3,10 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "exports": {
-    ".": "./theme.css",
+    ".": "./src/index.ts",
     "./theme.css": "./theme.css"
   },
   "files": [
+    "src",
     "theme.css"
   ]
 }
