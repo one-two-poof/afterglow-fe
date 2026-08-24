@@ -12,7 +12,12 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@afterglow/api": "workspace:*",
     "@afterglow/tokens": "workspace:*",
+    "@afterglow/types": "workspace:*",
+    "@afterglow/utils": "workspace:*",
+    "@tanstack/react-query": "^5.101.4",
+    "axios": "^1.18.1",
     "expo": "~57.0.15",
     "expo-constants": "~57.0.13",
     "expo-font": "~57.0.1",
