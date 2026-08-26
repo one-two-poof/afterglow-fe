@@ -51,3 +51,14 @@ export interface RecommendedCourse {
 export interface RecommendationResponse {
   daily_recommendations: RecommendedCourse[];
 }
+
+/**
+ * GET /api/recommendations 응답 아이템 (저장된 "내 코스").
+ * 구조는 추천 코스(RecommendedCourse)와 동일하고 selectionId/selectedAt만 추가된다.
+ */
+export interface SavedCourse extends RecommendedCourse {
+  /** 저장 선택 식별자 (서버 부여) */
+  selectionId: number;
+  /** 저장 시각 (ISO 8601) */
+  selectedAt: string;
+}
