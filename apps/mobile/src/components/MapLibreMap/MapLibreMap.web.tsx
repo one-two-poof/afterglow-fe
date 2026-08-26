@@ -1,13 +1,12 @@
 import { Text, View } from "react-native";
 
+import { type MapLibreMapProps } from "./types";
+
 /**
- * 웹(react-native-web)용 MapLibreMap 대체.
- *
- * @maplibre/maplibre-react-native는 MapLibre Native(iOS/Android) 래퍼라 웹에서
- * 동작하지 않는다. 웹 미리보기가 깨지지 않도록 플레이스홀더만 렌더한다.
- * (Metro가 웹 번들에서 이 .web 파일을 자동 선택 → 웹 번들에 네이티브 지도 미포함)
+ * 웹(react-native-web)용 MapLibreMap 대체. maplibre-react-native는 네이티브 전용이라
+ * 웹에선 플레이스홀더만 렌더한다(props는 시그니처만 맞춤). Metro가 웹 번들에서 자동 선택.
  */
-export function MapLibreMap() {
+export function MapLibreMap(_props: MapLibreMapProps) {
   return (
     <View className="flex-1 items-center justify-center bg-surface-muted">
       <Text className="text-body-sm text-text-muted">
