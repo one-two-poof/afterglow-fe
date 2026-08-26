@@ -8,6 +8,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -115,19 +116,20 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
       onRequestClose={handleBack}
       statusBarTranslucent
     >
-      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)" }}>
+      <View style={{ flex: 1 }} className="justify-end">
+        {/* 배경(시트 위 영역) 탭 → 닫기 */}
         <Pressable
           accessibilityLabel="닫기"
           onPress={handleClose}
-          style={{ flex: 1 }}
+          style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.4)" }]}
         />
 
-        <SafeAreaView edges={["bottom"]} className="rounded-t-[20px] bg-bg">
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
-            className="max-h-[88%]"
-          >
-            <View className="h-[88%]">
+        {/* 시트: 전체화면(flex-1) 기준 88% 확정 높이 → 내부 ScrollView가 정상 스크롤 */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          className="h-[88%] rounded-t-[20px] bg-bg"
+        >
+          <SafeAreaView edges={["bottom"]} className="flex-1">
               <View className="flex-row items-center gap-2 px-4 py-3">
                 <Pressable
                   accessibilityRole="button"
@@ -234,9 +236,8 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
                   </>
                 )}
               </View>
-            </View>
-          </KeyboardAvoidingView>
-        </SafeAreaView>
+          </SafeAreaView>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
