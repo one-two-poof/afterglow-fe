@@ -72,7 +72,7 @@ packages/
   - [x] PR 10. 패널 골격 + use-trip-plan-form (스텝 상태 머신)
   - [x] PR 11. TreatmentStep + TreatmentDateStep + ScheduleStep
   - [x] PR 12. PurposeStep + PlaceStep + WalkPreferenceStep
-  - [ ] PR 13. ResultStep + use-recommend-courses 연동
+  - [x] PR 13. ResultStep + use-recommend-courses 연동
 - [ ] **PR 14. 지도 (1) 기본 렌더**: @maplibre/maplibre-react-native로 지도 + 건물 PMTiles 렌더. 여기서 PMTiles 지원 리스크 해소.
 - [ ] **PR 15. 지도 (2) 그림자**: shadows.ts를 `packages/utils`(또는 `packages/map-core`)로 승격, 네이티브 지도에 그림자 레이어 적용.
 - [ ] **PR 16. 지도 (3) 코스 렌더**: 추천 코스 클릭 → 지도에 좌표(mapX=lng, mapY=lat) 렌더.
