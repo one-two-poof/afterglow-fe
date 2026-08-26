@@ -22,3 +22,11 @@ export class UnauthorizedError extends Error {
 export const getAccessToken = (): string | null => {
   return null;
 };
+
+/**
+ * 액세스 토큰 삭제 (로그아웃/만료 시).
+ * TODO(PR 18): expo-secure-store에서 토큰을 지우도록 교체.
+ */
+export const clearAccessToken = (): void => {
+  // no-op (스텁)
+};
