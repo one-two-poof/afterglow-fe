@@ -87,6 +87,9 @@ importers:
       '@afterglow/api':
         specifier: workspace:*
         version: link:../../packages/api
+      '@afterglow/stores':
+        specifier: workspace:*
+        version: link:../../packages/stores
       '@afterglow/tokens':
         specifier: workspace:*
         version: link:../../packages/tokens
@@ -193,6 +196,9 @@ importers:
       '@afterglow/api':
         specifier: workspace:*
         version: link:../../packages/api
+      '@afterglow/stores':
+        specifier: workspace:*
+        version: link:../../packages/stores
       '@afterglow/tokens':
         specifier: workspace:*
         version: link:../../packages/tokens
@@ -302,6 +308,19 @@ importers:
       axios:
         specifier: ^1.18.1
         version: 1.18.1
+    devDependencies:
+      '@afterglow/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/stores:
+    dependencies:
+      zustand:
+        specifier: ^5.0.14
+        version: 5.0.14(@types/react@19.2.17)(react@19.2.8)
     devDependencies:
       '@afterglow/typescript-config':
         specifier: workspace:*

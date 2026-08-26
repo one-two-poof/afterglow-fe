@@ -62,7 +62,7 @@ packages/
 ### Phase 2 — 앱 골격
 
 - [x] **PR 6. 탭 네비게이션**: expo-router의 Tabs로 홈/내 코스/내 정보 3탭 (웹 Footer에 해당). lucide-react-native 아이콘.
-- [ ] **PR 7. Toast**: toast-store(zustand)는 공유 가능하면 packages로 승격, RN Toast UI는 Animated로 구현.
+- [x] **PR 7. Toast**: toast-store(zustand)는 공유 가능하면 packages로 승격, RN Toast UI는 Animated로 구현.
 
 ### Phase 3 — 기능 이식 (화면 단위)
 

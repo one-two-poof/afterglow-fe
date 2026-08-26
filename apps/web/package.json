@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@afterglow/api": "workspace:*",
+    "@afterglow/stores": "workspace:*",
     "@afterglow/tokens": "workspace:*",
     "@afterglow/types": "workspace:*",
     "@afterglow/ui": "workspace:*",
