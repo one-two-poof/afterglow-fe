@@ -7,6 +7,17 @@
  * 항상 토큰 없음(null)을 반환한다.
  */
 
+/** 로그인 사용자 정보 (GET /api/auth/me 응답, 웹과 동일) */
+export interface AuthUser {
+  id: number;
+  name: string;
+  email: string;
+  /** Google 프로필 이미지 URL (없을 수 있음) */
+  profileImageUrl?: string;
+  role?: string;
+  createdAt?: string;
+}
+
 /** 401/403 등 인증 실패를 일반 에러와 구분하기 위한 타입 (웹과 동일) */
 export class UnauthorizedError extends Error {
   constructor(message = "Unauthorized") {
