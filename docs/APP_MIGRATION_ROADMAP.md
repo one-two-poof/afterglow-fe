@@ -78,7 +78,7 @@ packages/
 - [ ] **PR 16. 지도 (3) 코스 렌더**: 추천 코스 클릭 → 지도에 좌표(mapX=lng, mapY=lat) 렌더.
 - [x] **PR 17. 내 코스 화면**: MyCourse, SavedCourseCard, 스켈레톤.
 - [ ] **PR 18. 인증**: Google OAuth를 딥링크 기반으로 재설계 (expo-auth-session 또는 백엔드 콜백→커스텀 스킴 리다이렉트). 토큰은 expo-secure-store. **백엔드 협의 필요** — 콜백 URL에 앱 스킴 허용.
-- [ ] **PR 19. 내 정보 화면**: MyPage, ProfileHeader, SettingsList, LoginPrompt. use-me 훅 공유화.
+- [x] **PR 19. 내 정보 화면**: MyPage, ProfileHeader, SettingsList, LoginPrompt. use-me 훅 공유화.
 
 ### Phase 4 — 출시 준비 & 정리
 
