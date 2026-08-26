@@ -31,11 +31,14 @@ const FIELD_SIZE: Record<Size, string> = {
   lg: "h-[48px] gap-2 px-4",
 };
 
-// 타이포는 문자열을 렌더하는 TextInput(=Text 계열)에 적용해야 하므로 input 쪽으로 옮겼다.
+// 타이포는 문자열을 렌더하는 TextInput(=Text 계열)에 적용한다.
+// ⚠️ text-label-* 는 lineHeight까지 포함하는데, iOS 단일 라인 TextInput에 lineHeight를
+//    주면 값이 채워졌을 때(특히 blur 시) 텍스트 수직 정렬이 틀어진다. 그래서 여기선
+//    fontSize + weight만 주고 lineHeight는 빼서 폰트 기본 메트릭으로 수직 중앙 정렬되게 한다.
 const INPUT_SIZE: Record<Size, string> = {
-  sm: "text-label-sm",
-  md: "text-label-md",
-  lg: "text-label-lg",
+  sm: "text-[12px] font-semibold",
+  md: "text-[14px] font-semibold",
+  lg: "text-[16px] font-semibold",
 };
 
 const INPUT_BASE_STYLE = "flex-1 min-w-0 bg-transparent text-text";
