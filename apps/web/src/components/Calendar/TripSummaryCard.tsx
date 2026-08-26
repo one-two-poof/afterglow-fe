@@ -1,6 +1,4 @@
-import { cn } from "@afterglow/utils";
-
-import { formatDateWithWeekday, type DateRange } from "./date-utils";
+import { cn, formatDateWithWeekday, type DateRange } from "@afterglow/utils";
 
 export interface TripSummaryCardProps {
   range: DateRange;
