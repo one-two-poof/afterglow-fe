@@ -15,7 +15,7 @@ export default function HomeScreen() {
   const { data: users, isPending, isError, error } = useUsers();
 
   return (
-    <SafeAreaView className="flex-1 bg-bg">
+    <SafeAreaView className="flex-1 bg-bg" edges={["top"]}>
       <View className="flex-1 items-center justify-center gap-4 px-6">
         <Text className="text-heading-md text-text">Hello afterglow 👋</Text>
 
