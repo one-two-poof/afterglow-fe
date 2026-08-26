@@ -56,12 +56,12 @@ packages/
 `packages/ui`의 각 컴포넌트를 RN으로 이식. div→View, button→Pressable, 텍스트는 반드시 Text로.
 
 - [x] **PR 3. Button**
-- [ ] **PR 4. Input** (TextInput, 포커스/에러 상태)
-- [ ] **PR 5. Logo + StatusBadge + TagList** (단순 컴포넌트 묶음)
+- [x] **PR 4. Input** (TextInput, 포커스/에러 상태)
+- [x] **PR 5. Logo + StatusBadge + TagList** (단순 컴포넌트 묶음)
 
 ### Phase 2 — 앱 골격
 
-- [ ] **PR 6. 탭 네비게이션**: expo-router의 Tabs로 홈/내 코스/내 정보 3탭 (웹 Footer에 해당). lucide-react-native 아이콘.
+- [x] **PR 6. 탭 네비게이션**: expo-router의 Tabs로 홈/내 코스/내 정보 3탭 (웹 Footer에 해당). lucide-react-native 아이콘.
 - [ ] **PR 7. Toast**: toast-store(zustand)는 공유 가능하면 packages로 승격, RN Toast UI는 Animated로 구현.
 
 ### Phase 3 — 기능 이식 (화면 단위)
