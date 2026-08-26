@@ -1,20 +1,24 @@
 import { useToastStore } from "@afterglow/stores";
 import { Button } from "@afterglow/ui-native";
 import { cn } from "@afterglow/utils";
+import { useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { TripPlanPanel } from "@/components/TripPlanPanel";
 import { useUsers } from "@/hooks/use-users";
 
 /**
  * 홈 화면 + 전환 인프라 검증.
  *
  * - react-query + @afterglow/api (PR 2)
- * - ui-native Button (PR 3) + 전역 Toast (PR 7): 버튼을 누르면 토스트가 뜬다.
+ * - ui-native Button (PR 3) + 전역 Toast (PR 7)
+ * - TripPlanPanel 바텀시트 열기 (PR 10)
  */
 export default function HomeScreen() {
   const { data: users, isPending, isError, error } = useUsers();
   const showToast = useToastStore((s) => s.show);
+  const [planOpen, setPlanOpen] = useState(false);
 
   return (
     <SafeAreaView className="flex-1 bg-bg" edges={["top"]}>
@@ -41,10 +45,18 @@ export default function HomeScreen() {
           )}
         </View>
 
-        <Button variant="primary" onPress={() => showToast("토스트 테스트 🎉")}>
+        <Button variant="primary" onPress={() => setPlanOpen(true)}>
+          여행 계획 짜기
+        </Button>
+        <Button
+          variant="secondary"
+          onPress={() => showToast("토스트 테스트 🎉")}
+        >
           토스트 띄우기
         </Button>
       </View>
+
+      <TripPlanPanel open={planOpen} onClose={() => setPlanOpen(false)} />
     </SafeAreaView>
   );
 }

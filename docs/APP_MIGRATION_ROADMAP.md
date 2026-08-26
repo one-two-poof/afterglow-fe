@@ -66,10 +66,10 @@ packages/
 
 ### Phase 3 — 기능 이식 (화면 단위)
 
-- [ ] **PR 8. PlaceCard**
-- [ ] **PR 9. Calendar**: date-utils는 순수 TS → `packages/utils`로 승격 후 공유. 캘린더 UI는 RN으로 새로 구현.
+- [x] **PR 8. PlaceCard**
+- [x] **PR 9. Calendar**: date-utils는 순수 TS → `packages/utils`로 승격 후 공유. 캘린더 UI는 RN으로 새로 구현.
 - [ ] **PR 10~13. TripPlanPanel**: 웹의 바텀시트 패널 → RN 바텀시트. 스텝별로 PR 분할:
-  - [ ] PR 10. 패널 골격 + use-trip-plan-form (스텝 상태 머신)
+  - [x] PR 10. 패널 골격 + use-trip-plan-form (스텝 상태 머신)
   - [ ] PR 11. TreatmentStep + TreatmentDateStep + ScheduleStep
   - [ ] PR 12. PurposeStep + PlaceStep + WalkPreferenceStep
   - [ ] PR 13. ResultStep + use-recommend-courses 연동
