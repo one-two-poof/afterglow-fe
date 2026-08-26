@@ -2,6 +2,7 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
 export { toLatLng, type MapPoint, type LatLng } from "./geo";
+export * from "./date-utils";
 
 /**
  * 조건부 클래스 합성(clsx) + Tailwind 클래스 충돌 병합(tailwind-merge).

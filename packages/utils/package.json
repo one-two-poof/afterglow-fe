@@ -6,7 +6,8 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "jest --passWithNoTests"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -14,6 +15,10 @@
   },
   "devDependencies": {
     "@afterglow/typescript-config": "workspace:*",
+    "@swc/core": "^1.15.47",
+    "@swc/jest": "^0.2.39",
+    "@types/jest": "^30.0.0",
+    "jest": "^30.4.2",
     "typescript": "^5.9.3"
   }
 }
