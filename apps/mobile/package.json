@@ -14,6 +14,7 @@
   "dependencies": {
     "@afterglow/api": "workspace:*",
     "@afterglow/tokens": "workspace:*",
+    "@afterglow/ui-native": "workspace:*",
     "@afterglow/types": "workspace:*",
     "@afterglow/utils": "workspace:*",
     "@tanstack/react-query": "^5.101.4",

@@ -55,7 +55,7 @@ packages/
 
 `packages/ui`의 각 컴포넌트를 RN으로 이식. div→View, button→Pressable, 텍스트는 반드시 Text로.
 
-- [ ] **PR 3. Button**
+- [x] **PR 3. Button**
 - [ ] **PR 4. Input** (TextInput, 포커스/에러 상태)
 - [ ] **PR 5. Logo + StatusBadge + TagList** (단순 컴포넌트 묶음)
 
