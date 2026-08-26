@@ -8,7 +8,7 @@ import { createPortal } from "react-dom";
 
 import { useCourseSelection } from "@/hooks/use-course-selection";
 import { useAdoptedCoursesStore } from "@/stores/adopted-courses-store";
-import { useToastStore } from "@/stores/toast-store";
+import { useToastStore } from "@afterglow/stores";
 
 import { useFocusTrap } from "./hooks/use-focus-trap";
 import { useIsMounted } from "./hooks/use-is-mounted";

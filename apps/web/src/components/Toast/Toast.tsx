@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-import { useToastStore } from "@/stores/toast-store";
+import { useToastStore } from "@afterglow/stores";
 
 /** 앱 프레임 하단 중앙 토스트. 메시지가 설정되면 잠깐 보여주고 자동으로 사라진다. */
 export const Toast = () => {
