@@ -77,7 +77,7 @@ packages/
 - [ ] **PR 15. 지도 (2) 그림자**: shadows.ts를 `packages/utils`(또는 `packages/map-core`)로 승격, 네이티브 지도에 그림자 레이어 적용.
 - [ ] **PR 16. 지도 (3) 코스 렌더**: 추천 코스 클릭 → 지도에 좌표(mapX=lng, mapY=lat) 렌더.
 - [x] **PR 17. 내 코스 화면**: MyCourse, SavedCourseCard, 스켈레톤.
-- [ ] **PR 18. 인증**: Google OAuth를 딥링크 기반으로 재설계 (expo-auth-session 또는 백엔드 콜백→커스텀 스킴 리다이렉트). 토큰은 expo-secure-store. **백엔드 협의 필요** — 콜백 URL에 앱 스킴 허용.
+- [x] **PR 18. 인증**: Google OAuth를 딥링크 기반으로 재설계 (expo-web-browser `openAuthSessionAsync` + 커스텀 스킴 `afterglow://oauth/callback`). 토큰은 expo-secure-store(메모리 캐시 hydrate + `useSyncExternalStore`). **백엔드 후속 필요** — 모바일 요청 시 최종 리다이렉트를 웹 URL이 아닌 `afterglow://oauth/callback?token=...` 로 보내야 앱 복귀 완성(프론트는 `redirect_uri` 전달 중).
 - [x] **PR 19. 내 정보 화면**: MyPage, ProfileHeader, SettingsList, LoginPrompt. use-me 훅 공유화.
 
 ### Phase 4 — 출시 준비 & 정리
