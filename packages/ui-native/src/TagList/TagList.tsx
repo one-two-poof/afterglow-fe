@@ -58,9 +58,13 @@ const TagListRoot = ({
         showsHorizontalScrollIndicator={false}
         accessibilityRole="tablist"
         accessibilityLabel={ariaLabel}
-        contentContainerClassName={cn("items-center gap-2", className)}
       >
-        {children}
+        {/* contentContainerClassName(NativeWind content-container 인터롭)은 css-interop의
+            "변수 upgrade" 오탐 → 경고 직렬화 크래시를 유발한다. 안쪽 flex-row View에
+            className을 주는 방식으로 동일 레이아웃을 얻으면서 그 경로를 피한다. */}
+        <View className={cn("flex-row items-center gap-2", className)}>
+          {children}
+        </View>
       </ScrollView>
     </TagListContext.Provider>
   );
