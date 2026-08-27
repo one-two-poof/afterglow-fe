@@ -2,6 +2,7 @@ import { QueryClientProvider, focusManager } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 import { AppState, Platform, type AppStateStatus } from "react-native";
 
+import { hydrateAccessToken } from "@/lib/auth";
 import { createQueryClient } from "@/lib/query-client";
 
 /**
@@ -23,6 +24,12 @@ function onAppStateChange(status: AppStateStatus) {
  */
 export function AppProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => createQueryClient());
+
+  // 부팅 시 secure-store의 액세스 토큰을 메모리 캐시로 1회 로드한다.
+  // 완료 전까지 useAccessToken은 undefined(로딩)를 반환한다.
+  useEffect(() => {
+    void hydrateAccessToken();
+  }, []);
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", onAppStateChange);
