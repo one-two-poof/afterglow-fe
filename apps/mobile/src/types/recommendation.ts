@@ -7,7 +7,17 @@
  *
  * 지도용 좌표 변환 헬퍼(courseToMarkers 등)는 지도 PR(14~16)에서 함께 이식한다.
  */
-import type { MapPoint } from "@afterglow/utils";
+import type { LatLng, MapPoint } from "@afterglow/utils";
+
+/**
+ * 코스 좌표(mapX=위도/mapY=경도) → 지도 좌표(lat/lng).
+ * ⚠️ BE 장소용 toLatLng(mapX=경도)와 **반대 관례**다. ML 추천 서버의 코스 응답은
+ * mapX에 위도, mapY에 경도를 담아 내려주므로 여기서만 별도로 변환한다(웹과 동일).
+ */
+const courseToLatLng = (point: MapPoint): LatLng => ({
+  lat: point.mapX,
+  lng: point.mapY,
+});
 
 /** 코스에 포함된 개별 장소 (방문 순서대로) */
 export interface RecommendedPlace extends MapPoint {
@@ -61,4 +71,52 @@ export interface SavedCourse extends RecommendedCourse {
   selectionId: number;
   /** 저장 시각 (ISO 8601) */
   selectedAt: string;
+}
+
+/** 지도 마커 (좌표 + 라벨). 모바일 MapMarker와 호환된다. */
+export type CourseMarker = LatLng & { label: string };
+
+/**
+ * 추천 코스(RecommendedCourse)의 "출발지 → 도착지" 두 지점만 마커로 찍는다.
+ * - 출발지 = 코스의 맨 처음 지점(첫날 start_location)
+ * - 도착지 = 코스의 맨 마지막 지점(마지막 방문 장소)
+ * (웹 courseToMarkers와 동일 — 경로 API 연동 전 임시 표시)
+ */
+export function courseToMarkers(course: RecommendedCourse): CourseMarker[] {
+  const points: (MapPoint & { name?: string; place_name?: string })[] =
+    course.daily_schedules.flatMap((day) => [
+      day.start_location,
+      ...day.places,
+    ]);
+  const first = points[0];
+  const last = points[points.length - 1];
+  if (!first || !last || first === last) {
+    return [];
+  }
+
+  const nameOf = (p: (typeof points)[number]) => p.place_name ?? p.name ?? "";
+  return [
+    {
+      ...courseToLatLng(first),
+      label: `출발지${nameOf(first) ? ` · ${nameOf(first)}` : ""}`,
+    },
+    {
+      ...courseToLatLng(last),
+      label: `도착지${nameOf(last) ? ` · ${nameOf(last)}` : ""}`,
+    },
+  ];
+}
+
+/**
+ * 저장된 코스(SavedCourse)의 모든 지점을 마커로.
+ * 각 날의 출발지 + 방문 장소 전체를 이름 라벨과 함께 반환한다(웹과 동일).
+ */
+export function savedCourseToMarkers(course: SavedCourse): CourseMarker[] {
+  return course.daily_schedules.flatMap((day) => [
+    { ...courseToLatLng(day.start_location), label: day.start_location.name },
+    ...day.places.map((place) => ({
+      ...courseToLatLng(place),
+      label: place.place_name,
+    })),
+  ]);
 }
