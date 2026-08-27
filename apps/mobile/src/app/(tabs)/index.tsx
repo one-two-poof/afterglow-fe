@@ -9,21 +9,39 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MapLibreMap } from "@/components/MapLibreMap";
 import { TripPlanPanel } from "@/components/TripPlanPanel";
 import { useAccessToken } from "@/hooks/use-access-token";
+import { useCategoryPlaces } from "@/hooks/use-category-places";
 import { useDebounce } from "@/hooks/use-debounce";
 import { usePlaces } from "@/hooks/use-places";
 import { useRecommendations } from "@/hooks/use-recommendations";
+import { type PlaceCategory } from "@/lib/places";
 import { type Place } from "@/types/place";
 import { savedCourseToMarkers } from "@/types/recommendation";
 
-// 코스 필터 해제(기본) 값. 저장 코스 태그는 selectionId 문자열을 값으로 쓴다.
+// 필터 해제(기본) 값. "전체" = 모든 마커 해제. 저장 코스 태그는 selectionId 문자열,
+// 카테고리 태그는 PlaceCategory 문자열을 값으로 쓴다.
 const FILTER_ALL = "all";
 
+// 지도 카테고리 필터 태그 (웹 홈과 동일). "전체"는 필터 해제.
+const CATEGORY_ITEMS: { value: string; name: string; icon?: string }[] = [
+  { value: FILTER_ALL, name: "전체" },
+  { value: "hospital", icon: "🏥", name: "병원" },
+  { value: "attraction", icon: "🗺️", name: "관광명소" },
+  { value: "accommodation", icon: "🏨", name: "숙소" },
+];
+
+const PLACE_CATEGORIES: PlaceCategory[] = [
+  "hospital",
+  "attraction",
+  "accommodation",
+];
+
 /**
- * 홈 = 전체화면 지도 + 상단 검색 오버레이 + 여행 계획 열기(+) 버튼 (웹 홈과 동일 구조).
+ * 홈 = 전체화면 지도 + 상단 검색 오버레이 + 하단 카테고리/코스 태그 + 여행 계획(+)
+ * 버튼 (웹 홈과 동일 구조).
  *
  * 검색: 입력을 300ms 디바운스해 /api/places 조회, 결과를 지도 위 드롭다운으로.
- * 선택하면 그 장소를 지도 마커로 찍고 카메라를 이동한다.
- * (카테고리 TagList/저장 코스 태그는 후속 PR)
+ * 태그: 카테고리(병원/관광명소/숙소) 또는 저장 코스를 고르면 해당 지점들을 마커로.
+ * "전체"는 모든 마커를 해제한다.
  */
 export default function HomeScreen() {
   const [planOpen, setPlanOpen] = useState(false);
@@ -47,6 +65,13 @@ export default function HomeScreen() {
   const selectedCourse = courses.find(
     (course) => String(course.selectionId) === filter,
   );
+
+  // 카테고리 태그(병원/관광명소/숙소) 선택 시 그 카테고리 전체를 조회.
+  // "전체"·코스 선택 시엔 null이라 요청하지 않는다.
+  const category = (PLACE_CATEGORIES as string[]).includes(filter)
+    ? (filter as PlaceCategory)
+    : null;
+  const { data: categoryPlaces = [] } = useCategoryPlaces(category);
 
   const showResults = searchOpen && search.trim() !== "";
 
@@ -74,7 +99,7 @@ export default function HomeScreen() {
     setSelectedPlace(null);
   };
 
-  // 마커 우선순위: 검색 장소 → 선택 코스 (그 외엔 없음). 웹 홈과 동일 의도.
+  // 마커 우선순위: 검색 장소 → 선택 코스 → 선택 카테고리 (전체는 없음). 웹 홈과 동일.
   const markers = useMemo(() => {
     if (selectedPlace) {
       return [{ ...toLatLng(selectedPlace), label: selectedPlace.placeName }];
@@ -82,8 +107,11 @@ export default function HomeScreen() {
     if (selectedCourse) {
       return savedCourseToMarkers(selectedCourse);
     }
-    return [];
-  }, [selectedPlace, selectedCourse]);
+    return categoryPlaces.map((place) => ({
+      ...toLatLng(place),
+      label: place.placeName,
+    }));
+  }, [selectedPlace, selectedCourse, categoryPlaces]);
 
   return (
     <View className="flex-1 bg-bg">
@@ -140,30 +168,37 @@ export default function HomeScreen() {
         </View>
       </SafeAreaView>
 
-      {/* 저장한 코스 태그 (로그인 & 코스 존재 시). 클릭하면 그 코스 지점들을 지도에
-          마커로 찍고 카메라를 이동한다. FAB/recenter(bottom-24) 위에 얹는다. */}
-      {courses.length > 0 && (
-        <View pointerEvents="box-none" className="absolute inset-x-0 bottom-40">
-          <TagList
-            value={filter}
-            onChange={selectFilter}
-            aria-label="저장한 코스"
-            className="px-4"
-          >
-            <TagList.Item value={FILTER_ALL}>전체</TagList.Item>
-            {courses.map((course) => (
-              <TagList.Item
-                key={course.selectionId}
-                value={String(course.selectionId)}
-                icon={<Text>📍</Text>}
-              >
-                {course.daily_schedules[0]?.start_location.name ??
-                  course.course_id}
-              </TagList.Item>
-            ))}
-          </TagList>
-        </View>
-      )}
+      {/* 하단 태그: 카테고리(전체/병원/관광명소/숙소) + 저장 코스(로그인 시).
+          카테고리를 고르면 그 카테고리 장소를, 코스를 고르면 코스 지점들을 마커로
+          찍는다. "전체"는 모든 마커 해제. FAB/recenter(bottom-24) 위에 얹는다. */}
+      <View pointerEvents="box-none" className="absolute inset-x-0 bottom-40">
+        <TagList
+          value={filter}
+          onChange={selectFilter}
+          aria-label="지도 필터"
+          className="px-4"
+        >
+          {CATEGORY_ITEMS.map((item) => (
+            <TagList.Item
+              key={item.value}
+              value={item.value}
+              icon={item.icon ? <Text>{item.icon}</Text> : undefined}
+            >
+              {item.name}
+            </TagList.Item>
+          ))}
+          {courses.map((course) => (
+            <TagList.Item
+              key={course.selectionId}
+              value={String(course.selectionId)}
+              icon={<Text>📍</Text>}
+            >
+              {course.daily_schedules[0]?.start_location.name ??
+                course.course_id}
+            </TagList.Item>
+          ))}
+        </TagList>
+      </View>
 
       <Pressable
         accessibilityRole="button"

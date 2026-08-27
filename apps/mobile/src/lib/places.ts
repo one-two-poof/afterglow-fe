@@ -24,3 +24,29 @@ export async function fetchPlaces(name?: string): Promise<Place[]> {
   // 백엔드가 같은 장소를 중복으로 내려줄 수 있어 id 기준으로 제거
   return dedupeById(data);
 }
+
+/** 지도 카테고리 필터 종류 (웹 lib/places와 동일). */
+export type PlaceCategory = "hospital" | "accommodation" | "attraction";
+
+/** 카테고리별 장소 조회. name 생략 시 해당 카테고리 전체. */
+const fetchPlacesByCategory = async (
+  category: PlaceCategory,
+  name?: string,
+): Promise<Place[]> => {
+  const { data } = await apiClient.get<Place[]>(`/api/places/${category}`, {
+    params: name ? { name } : undefined,
+  });
+  return dedupeById(data);
+};
+
+/** 병원 목록 (name 생략 시 전체) */
+export const fetchHospitals = (name?: string) =>
+  fetchPlacesByCategory("hospital", name);
+
+/** 숙소 목록 (name 생략 시 전체) */
+export const fetchAccommodations = (name?: string) =>
+  fetchPlacesByCategory("accommodation", name);
+
+/** 관광명소 목록 (name 생략 시 전체) */
+export const fetchAttractions = (name?: string) =>
+  fetchPlacesByCategory("attraction", name);
