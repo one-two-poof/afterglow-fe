@@ -40,9 +40,28 @@ export type MapMarker = LatLng & {
 
 type MapLibreMapProps = {
   markers?: MapMarker[];
+  /**
+   * 카테고리 장소처럼 수가 많은 지점들. DOM Marker 대신 GeoJSON 소스 +
+   * circle 레이어(GPU 렌더)로 그리고 클러스터링해 수천 개도 렉 없이 표시한다.
+   */
+  places?: MapMarker[];
   /** 그릴 경로들 (shortest·shady 모두). shady는 빨강, 그 외 파랑 */
   routeLines?: RouteLine[];
 };
+
+/** 많은 장소를 클러스터 circle 레이어용 GeoJSON으로 변환 (label을 속성으로) */
+function placesToFeatureCollection(
+  places: MapMarker[],
+): GeoJSON.FeatureCollection<GeoJSON.Point> {
+  return {
+    type: "FeatureCollection",
+    features: places.map(({ lat, lng, label }) => ({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [lng, lat] },
+      properties: { label: label ?? "" },
+    })),
+  };
+}
 
 /** 경로들을 line 레이어용 GeoJSON FeatureCollection으로 변환 (shady를 속성으로) */
 function linesToFeatureCollection(
@@ -56,6 +75,17 @@ function linesToFeatureCollection(
       properties: { shady },
     })),
   };
+}
+
+/** Point 지오메트리에서 [lng, lat] 튜플을 안전하게 뽑는다 (아니면 null). */
+function pointCenter(
+  geometry: GeoJSON.Geometry | undefined,
+): [number, number] | null {
+  if (geometry?.type !== "Point") {
+    return null;
+  }
+  const [lng, lat] = geometry.coordinates;
+  return lng == null || lat == null ? null : [lng, lat];
 }
 
 // 디자인 토큰(@afterglow/tokens의 theme.css CSS 변수)을 런타임에 실제 색 문자열로 해석.
@@ -72,6 +102,7 @@ function readColorToken(name: string, fallback: string): string {
 
 export default function MapLibreMap({
   markers = [],
+  places = [],
   routeLines = [],
 }: MapLibreMapProps) {
   const mapEl = useRef<HTMLDivElement>(null);
@@ -81,6 +112,8 @@ export default function MapLibreMap({
   const markerRefs = useRef<maplibregl.Marker[]>([]);
   // 최신 routeLines를 load 핸들러(클로저)에서 읽기 위한 ref
   const routeLinesRef = useRef<RouteLine[]>(routeLines);
+  // 최신 places를 load 핸들러(클로저)에서 읽기 위한 ref
+  const placesRef = useRef<MapMarker[]>(places);
   // 현위치(위/경도). 최초 포커스 + 나침반 버튼에서 재사용
   const userLocationRef = useRef<LatLng | null>(null);
 
@@ -142,6 +175,17 @@ export default function MapLibreMap({
         data: { type: "FeatureCollection", features: [] },
       });
 
+      // 카테고리 장소 — 클러스터링 활성 GeoJSON 소스. 빈 소스로 시작해
+      // places prop이 바뀔 때 setData. cluster로 가까운 점들을 뭉쳐 렌더 부담을 줄인다.
+      // Source: https://maplibre.org/maplibre-gl-js/docs/examples/cluster/
+      map.addSource("places", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+        cluster: true,
+        clusterMaxZoom: 14,
+        clusterRadius: 50,
+      });
+
       // 디자인 토큰 기반 색상 (기존 하드코딩 색과 가장 유사한 토큰으로 매핑)
       const shadowColor = readColorToken("--color-secondary-900", "#1c2b45");
       const buildingColor = readColorToken("--color-neutral-600", "#5f6b78");
@@ -193,10 +237,104 @@ export default function MapLibreMap({
         },
       });
 
-      // 최초 로드 시 이미 전달된 경로가 있으면 반영
+      // 장소 마커 색상 (검색·코스 DOM Marker와 구분되는 카테고리 지점 색)
+      const placeColor = readColorToken("--color-primary-500", "#3b82f6");
+      const clusterTextColor = readColorToken("--color-neutral-0", "#ffffff");
+
+      // 클러스터(뭉친 점): 개수가 많을수록 원을 크게
+      map.addLayer({
+        id: "places-clusters",
+        type: "circle",
+        source: "places",
+        filter: ["has", "point_count"],
+        paint: {
+          "circle-color": placeColor,
+          "circle-opacity": 0.85,
+          "circle-radius": [
+            "step",
+            ["get", "point_count"],
+            16,
+            10,
+            22,
+            50,
+            30,
+          ],
+        },
+      });
+
+      // 클러스터 개수 라벨
+      map.addLayer({
+        id: "places-cluster-count",
+        type: "symbol",
+        source: "places",
+        filter: ["has", "point_count"],
+        layout: {
+          "text-field": ["get", "point_count_abbreviated"],
+          "text-font": ["Noto Sans Regular"],
+          "text-size": 12,
+        },
+        paint: { "text-color": clusterTextColor },
+      });
+
+      // 개별 지점(클러스터에 속하지 않은 점)
+      map.addLayer({
+        id: "places-point",
+        type: "circle",
+        source: "places",
+        filter: ["!", ["has", "point_count"]],
+        paint: {
+          "circle-color": placeColor,
+          "circle-radius": 7,
+          "circle-stroke-width": 2,
+          "circle-stroke-color": clusterTextColor,
+        },
+      });
+
+      // 클러스터 클릭 → 해당 클러스터가 펼쳐지는 줌까지 확대
+      map.on("click", "places-clusters", (e) => {
+        const feature = e.features?.[0];
+        const clusterId = feature?.properties?.cluster_id;
+        const center = pointCenter(feature?.geometry);
+        if (clusterId == null || !center) {
+          return;
+        }
+        const source = map.getSource<maplibregl.GeoJSONSource>("places");
+        source?.getClusterExpansionZoom(clusterId).then((zoom) => {
+          map.easeTo({ center, zoom });
+        });
+      });
+
+      // 개별 지점 클릭 → 장소명 팝업
+      map.on("click", "places-point", (e) => {
+        const feature = e.features?.[0];
+        const center = pointCenter(feature?.geometry);
+        const label = feature?.properties?.label;
+        if (!center || !label) {
+          return;
+        }
+        new maplibregl.Popup()
+          .setLngLat(center)
+          .setText(String(label))
+          .addTo(map);
+      });
+
+      // 커서 표시: 클러스터/지점 위에서 pointer로
+      for (const layer of ["places-clusters", "places-point"]) {
+        map.on("mouseenter", layer, () => {
+          map.getCanvas().style.cursor = "pointer";
+        });
+        map.on("mouseleave", layer, () => {
+          map.getCanvas().style.cursor = "";
+        });
+      }
+
+      // 최초 로드 시 이미 전달된 경로/장소가 있으면 반영
       map
         .getSource<maplibregl.GeoJSONSource>("routes")
         ?.setData(linesToFeatureCollection(routeLinesRef.current));
+      map
+        .getSource<maplibregl.GeoJSONSource>("places")
+        ?.setData(placesToFeatureCollection(placesRef.current));
 
       // 뷰포트의 건물로 그림자를 계산해 shadows 소스에 반영
       const updateShadows = () => {
@@ -288,6 +426,33 @@ export default function MapLibreMap({
       map.once("idle", apply);
     }
   }, [routeLines]);
+
+  // places가 바뀌면 클러스터 소스를 갱신하고, 지점이 있으면 모두 보이도록 이동.
+  // 소스는 스타일 로드 후 생기므로, 아직이면 idle 시점에 반영.
+  useEffect(() => {
+    placesRef.current = places;
+    const map = mapRef.current;
+    if (!map) {
+      return;
+    }
+    const apply = () => {
+      map
+        .getSource<maplibregl.GeoJSONSource>("places")
+        ?.setData(placesToFeatureCollection(placesRef.current));
+      if (placesRef.current.length > 0) {
+        const bounds = placesRef.current.reduce(
+          (acc, { lat, lng }) => acc.extend([lng, lat]),
+          new maplibregl.LngLatBounds(),
+        );
+        map.fitBounds(bounds, { padding: 64, maxZoom: 16, duration: 600 });
+      }
+    };
+    if (map.getSource("places")) {
+      apply();
+    } else {
+      map.once("idle", apply);
+    }
+  }, [places]);
 
   // 나침반 버튼: 현위치로 복귀 (아직 위치가 없으면 다시 요청)
   const handleRecenter = () => {

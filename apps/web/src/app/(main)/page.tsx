@@ -83,7 +83,7 @@ export default function Home() {
     : null;
   const { data: categoryPlaces = [] } = useCategoryPlaces(category);
 
-  // 마커 우선순위: 검색 장소 → 선택 코스 → 선택 카테고리 (그 외/전체는 없음)
+  // DOM 마커(소수): 검색 장소 → 선택 코스. 그 외/전체/카테고리는 없음.
   // (MapLibreMap이 markers 변경 시 fitBounds로 지도도 이동시킨다)
   const markers = useMemo(() => {
     if (selectedPlace) {
@@ -92,11 +92,19 @@ export default function Home() {
     if (selectedCourse) {
       return savedCourseToMarkers(selectedCourse);
     }
-    return categoryPlaces.map((place) => ({
-      ...toLatLng(place),
-      label: place.placeName,
-    }));
-  }, [selectedPlace, selectedCourse, categoryPlaces]);
+    return [];
+  }, [selectedPlace, selectedCourse]);
+
+  // 카테고리 장소(다수): DOM Marker 대신 클러스터 레이어로 렌더해 렉을 방지.
+  // 검색/코스 선택 시엔 category가 null이라 categoryPlaces가 비어 자연히 숨겨진다.
+  const places = useMemo(
+    () =>
+      categoryPlaces.map((place) => ({
+        ...toLatLng(place),
+        label: place.placeName,
+      })),
+    [categoryPlaces],
+  );
 
   // 여행 일정 만들기는 로그인 필요 — 미로그인 시 내 정보(로그인) 화면으로 이동
   const handleCreatePlan = () => {
@@ -109,7 +117,7 @@ export default function Home() {
 
   return (
     <div className="relative h-full">
-      <MapLibreMap markers={markers} />
+      <MapLibreMap markers={markers} places={places} />
       <div className="absolute top-4 left-1/2 z-20 w-[95%] -translate-x-1/2">
         <Input
           className="w-full"

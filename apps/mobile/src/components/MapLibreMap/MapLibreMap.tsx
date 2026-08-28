@@ -7,6 +7,7 @@ import {
   Marker,
   VectorSource,
 } from "@maplibre/maplibre-react-native";
+import * as Location from "expo-location";
 import { LocateFixed } from "lucide-react-native";
 import { useEffect, useRef } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -36,9 +37,44 @@ const SEOUL: [number, number] = [126.978, 37.5665];
  */
 export function MapLibreMap({ markers = [] }: MapLibreMapProps) {
   const cameraRef = useRef<CameraRef>(null);
+  // 확보한 현위치([lng, lat]). 최초 포커스 + 나침반 버튼에서 재사용. (웹의 userLocationRef 대응)
+  const userLocationRef = useRef<[number, number] | null>(null);
 
-  const recenter = () =>
-    cameraRef.current?.flyTo({ center: SEOUL, zoom: 15, duration: 600 });
+  // 위치 권한을 요청하고 현재 좌표를 [lng, lat]로 반환한다. 거부/실패 시 null.
+  const getCurrentLocation = async (): Promise<[number, number] | null> => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== "granted") {
+      return null;
+    }
+    const pos = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.High,
+    });
+    return [pos.coords.longitude, pos.coords.latitude];
+  };
+
+  // 나침반 버튼: 현위치로 이동 (없으면 다시 요청, 거부/실패 시 기본값 유지). 웹과 동일 의도.
+  const recenter = async () => {
+    const loc = userLocationRef.current ?? (await getCurrentLocation());
+    if (loc) {
+      userLocationRef.current = loc;
+    }
+    cameraRef.current?.flyTo({ center: loc ?? SEOUL, zoom: 15, duration: 600 });
+  };
+
+  // 진입 시 현위치를 확보해 중앙으로 이동 (거부/실패 시 기본값 유지). 웹 getCurrentPosition 대응.
+  useEffect(() => {
+    let cancelled = false;
+    getCurrentLocation().then((loc) => {
+      if (cancelled || !loc) {
+        return;
+      }
+      userLocationRef.current = loc;
+      cameraRef.current?.flyTo({ center: loc, zoom: 15, duration: 600 });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // markers가 바뀌면 그 지점들로 카메라 이동
   useEffect(() => {
@@ -60,7 +96,13 @@ export function MapLibreMap({ markers = [] }: MapLibreMapProps) {
 
   return (
     <View style={StyleSheet.absoluteFill}>
-      <Map style={StyleSheet.absoluteFill} mapStyle={BASEMAP_STYLE_URL}>
+      <Map
+        style={StyleSheet.absoluteFill}
+        mapStyle={BASEMAP_STYLE_URL}
+        // 웹의 attributionControl:false와 동일 — 정보(ⓘ) 버튼·로고 숨김
+        attribution={false}
+        logo={false}
+      >
         <Camera ref={cameraRef} initialViewState={{ center: SEOUL, zoom: 15 }} />
 
         <VectorSource id="buildings" url={`pmtiles://${BUILDINGS_PMTILES_URL}`}>
@@ -86,7 +128,7 @@ export function MapLibreMap({ markers = [] }: MapLibreMapProps) {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="기본 위치로 이동"
-        onPress={recenter}
+        onPress={() => void recenter()}
         className="absolute bottom-24 left-5 size-14 items-center justify-center rounded-full bg-neutral-0 shadow-md active:bg-surface-muted"
       >
         <LocateFixed size={24} color={colors.text} />

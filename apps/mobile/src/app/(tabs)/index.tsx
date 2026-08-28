@@ -170,13 +170,13 @@ export default function HomeScreen() {
 
       {/* 하단 태그: 카테고리(전체/병원/관광명소/숙소) + 저장 코스(로그인 시).
           카테고리를 고르면 그 카테고리 장소를, 코스를 고르면 코스 지점들을 마커로
-          찍는다. "전체"는 모든 마커 해제. FAB/recenter(bottom-24) 위에 얹는다. */}
-      <View pointerEvents="box-none" className="absolute inset-x-0 bottom-40">
+          찍는다. "전체"는 모든 마커 해제. 웹 홈처럼 지도 맨 하단에 둔다. */}
+      <View pointerEvents="box-none" className="absolute inset-x-0 bottom-0">
         <TagList
           value={filter}
           onChange={selectFilter}
           aria-label="지도 필터"
-          className="px-4"
+          className="px-4 pb-4"
         >
           {CATEGORY_ITEMS.map((item) => (
             <TagList.Item
