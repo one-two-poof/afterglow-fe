@@ -12,6 +12,7 @@
       "bundleIdentifier": "com.ytmt.afterglow.app",
       "infoPlist": {
         "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
           "NSExceptionDomains": {
             "ec2-3-38-187-218.ap-northeast-2.compute.amazonaws.com": {
               "NSExceptionAllowsInsecureHTTPLoads": true

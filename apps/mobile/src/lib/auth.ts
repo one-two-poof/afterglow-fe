@@ -123,10 +123,9 @@ const buildApiUrl = (path: string): string => {
  * @throws  응답에 token이 없으면 Error (호출부에서 토스트로 안내)
  */
 export const startGoogleLogin = async (): Promise<boolean> => {
-  // redirect_uri를 함께 전달해 백엔드가 최종 토큰을 앱 딥링크로 보내도록 한다.
-  const loginUrl = `${buildApiUrl(GOOGLE_LOGIN_PATH)}?redirect_uri=${encodeURIComponent(
-    OAUTH_REDIRECT_URI,
-  )}`;
+  // 웹과 동일하게 로그인 진입 URL만 연다(별도 파라미터 없음). 백엔드가 모바일
+  // 요청을 앱 딥링크(OAUTH_REDIRECT_URI)로 리다이렉트하도록 설정돼 있다.
+  const loginUrl = buildApiUrl(GOOGLE_LOGIN_PATH);
 
   const result = await WebBrowser.openAuthSessionAsync(
     loginUrl,
@@ -137,7 +136,6 @@ export const startGoogleLogin = async (): Promise<boolean> => {
     // dismiss/cancel 등 — 로그인 미완료
     return false;
   }
-
   const { queryParams } = Linking.parse(result.url);
   const token = queryParams?.token;
   if (typeof token !== "string" || token.length === 0) {

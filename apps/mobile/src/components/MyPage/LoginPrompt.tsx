@@ -1,5 +1,6 @@
 import { useToastStore } from "@afterglow/stores";
 import { Logo } from "@afterglow/ui-native";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
@@ -37,14 +38,18 @@ function GoogleIcon() {
  */
 export function LoginPrompt() {
   const showToast = useToastStore((s) => s.show);
+  const router = useRouter();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const handleGoogleLogin = async () => {
     if (isLoggingIn) return;
     setIsLoggingIn(true);
     try {
-      await startGoogleLogin();
-      // 성공 시 토큰 저장으로 화면이 전환되고, 취소 시 그대로 유지된다(별도 처리 불필요).
+      const loggedIn = await startGoogleLogin();
+      // 성공 시 홈(지도)으로 이동한다. 취소(false)면 로그인 화면을 그대로 둔다.
+      if (loggedIn) {
+        router.replace("/");
+      }
     } catch {
       showToast("로그인에 실패했어요. 잠시 후 다시 시도해주세요.");
     } finally {

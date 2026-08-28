@@ -95,9 +95,15 @@ const TagListItem = ({
       disabled={disabled}
       onPress={() => onChange(value)}
       className={cn(
-        "shrink-0 flex-row items-center gap-1.5 rounded-full px-4 py-2",
+        // shadow-sm(CSS 변수 기반)은 선택/비선택 모든 상태에서 항상 적용한다.
+        // 조건부로 shadow를 넣고 빼면 초기 렌더 이후 NativeWind(css-interop)가
+        // "변수 upgrade"를 시도하며 경고를 출력하는데, 그 경고 직렬화(stringify)가
+        // React 내부 fiber를 타고 react-navigation 기본 컨텍스트의 throwing getter에
+        // 닿아 "Couldn't find a navigation context" 크래시를 낸다. 항상 적용하면
+        // upgrade 상태가 초기 렌더부터 고정돼 그 경로를 피한다.
+        "shrink-0 flex-row items-center gap-1.5 rounded-full px-4 py-2 shadow-sm",
         disabled && "opacity-50",
-        selected ? "bg-primary" : "bg-neutral-0 shadow-sm",
+        selected ? "bg-primary" : "bg-neutral-0",
         className,
       )}
     >
