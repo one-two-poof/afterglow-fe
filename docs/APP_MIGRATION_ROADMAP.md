@@ -80,6 +80,12 @@ packages/
 - [ ] **PR 18. 인증**: Google OAuth를 딥링크 기반으로 재설계 (expo-auth-session 또는 백엔드 콜백→커스텀 스킴 리다이렉트). 토큰은 expo-secure-store. **백엔드 협의 필요** — 콜백 URL에 앱 스킴 허용.
 - [x] **PR 19. 내 정보 화면**: MyPage, ProfileHeader, SettingsList, LoginPrompt. use-me 훅 공유화.
 
+### Phase 3.5 — 다국어(i18n) · **출시 전 포함**
+
+앱 UI를 한국어/일본어/중국어(간체)로 렌더링 가능하게 한다. **첫 App Store 출시 전에 포함한다.** 상세 PR 분할은 별도 문서 참고: [`APP_I18N_ROADMAP.md`](./APP_I18N_ROADMAP.md).
+
+- [ ] **다국어 지원 (PR I-1 ~ I-10)**: i18n 인프라(i18next + react-i18next + expo-localization) → 화면별 문자열 교체 → 내 정보에 언어 선택 UI → ja/zh 번역·QA. 서버 데이터 번역은 비범위(추후). 세부 순서/체크박스는 `APP_I18N_ROADMAP.md`에서 관리.
+
 ### Phase 4 — 출시 준비 & 정리
 
 - [ ] **PR 20. 앱 아이콘/스플래시/폰트(Pretendard)**
