@@ -1,8 +1,9 @@
 import { colors } from "@afterglow/tokens";
 import { Input, TagList } from "@afterglow/ui-native";
 import { toLatLng } from "@afterglow/utils";
+import { useFocusEffect } from "expo-router";
 import { Plus, Search, X } from "lucide-react-native";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -61,7 +62,18 @@ export default function HomeScreen() {
 
   // 저장된 내 코스 — 로그인 상태에서만 조회 (하단 태그로 표시). 웹 홈과 동일.
   const token = useAccessToken();
-  const { data: courses = [] } = useRecommendations(typeof token === "string");
+  const isAuthed = typeof token === "string";
+  const { data: courses = [], refetch: refetchCourses } =
+    useRecommendations(isAuthed);
+
+  // 비활성 탭은 freeze되어 blur 중 토큰 변경(로그인)을 놓칠 수 있다. 홈이 다시
+  // 포커스될 때(예: 로그인 직후 replace("/"))마다 저장 코스를 재조회해, 별도 탭을
+  // 거치지 않아도 태그리스트가 바로 뜨도록 한다.
+  useFocusEffect(
+    useCallback(() => {
+      if (isAuthed) void refetchCourses();
+    }, [isAuthed, refetchCourses]),
+  );
   const selectedCourse = courses.find(
     (course) => String(course.selectionId) === filter,
   );
