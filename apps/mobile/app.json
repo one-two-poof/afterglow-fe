@@ -47,7 +47,13 @@
       ],
       "@maplibre/maplibre-react-native",
       "expo-secure-store",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "현재 위치를 지도에 표시하기 위해 위치 권한이 필요합니다."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
