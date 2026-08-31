@@ -3,7 +3,7 @@ import { colors } from "@afterglow/tokens";
 import { Input, TagList } from "@afterglow/ui-native";
 import { toLatLng } from "@afterglow/utils";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Plus, Search, X } from "lucide-react-native";
+import { Navigation, Plus, Search, X } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
 import { Image, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -13,6 +13,8 @@ import {
   type MapMarker,
   type MarkerDetail,
 } from "@/components/MapLibreMap/types";
+import { getCurrentLocation } from "@/lib/location";
+import { fetchRouteLines, ROUTE_COLORS, type RouteLine } from "@/lib/route";
 import { TripPlanPanel } from "@/components/TripPlanPanel";
 import { useAccessToken } from "@/hooks/use-access-token";
 import { useCategoryPlaces } from "@/hooks/use-category-places";
@@ -70,6 +72,9 @@ export default function HomeScreen() {
   const [filter, setFilter] = useState(FILTER_ALL);
   // 마커 클릭 시 하단에 띄울 상세. 마커 셋을 바꾸는 동작(검색/코스/카테고리 전환)에서 닫는다.
   const [detail, setDetail] = useState<MapMarker | null>(null);
+  // 경로 안내로 그린 경로(최단·그늘). 상세/마커가 바뀌면 지운다.
+  const [routeLines, setRouteLines] = useState<RouteLine[]>([]);
+  const [routing, setRouting] = useState(false);
 
   const debouncedSearch = useDebounce(search, 300);
   const searchEnabled = searchOpen && debouncedSearch.trim() !== "";
@@ -131,6 +136,7 @@ export default function HomeScreen() {
     // 검색 장소를 고르면 코스 선택은 해제한다(마커 대상은 하나만).
     setFilter(FILTER_ALL);
     setDetail(null);
+    setRouteLines([]);
   };
 
   // 코스 태그 선택 시: 검색 마커를 지우고 그 코스로 전환. FILTER_ALL이면 해제.
@@ -138,6 +144,41 @@ export default function HomeScreen() {
     setFilter(value);
     setSelectedPlace(null);
     setDetail(null);
+    setRouteLines([]);
+  };
+
+  // 상세 카드 닫기: 상세와 그린 경로를 함께 정리.
+  const closeDetail = () => {
+    setDetail(null);
+    setRouteLines([]);
+  };
+
+  // 경로 안내: 내 위치 → 선택 장소 경로(최단·그늘)를 조회해 지도에 그린다.
+  const handleRoute = async () => {
+    if (!detail || routing) {
+      return;
+    }
+    setRouting(true);
+    try {
+      const loc = await getCurrentLocation();
+      if (!loc) {
+        showToast("위치 권한이 필요해요");
+        return;
+      }
+      const lines = await fetchRouteLines(
+        { lat: loc[1], lng: loc[0] },
+        { lat: detail.lat, lng: detail.lng },
+      );
+      if (lines.length === 0) {
+        showToast("경로를 찾지 못했어요");
+        return;
+      }
+      setRouteLines(lines);
+    } catch {
+      showToast("경로를 불러오지 못했어요");
+    } finally {
+      setRouting(false);
+    }
   };
 
   // 마커 우선순위: 검색 장소 → 선택 코스 → 선택 카테고리 (전체는 없음). 웹 홈과 동일.
@@ -163,7 +204,11 @@ export default function HomeScreen() {
 
   return (
     <View className="flex-1 bg-bg">
-      <MapLibreMap markers={markers} onMarkerPress={setDetail} />
+      <MapLibreMap
+        markers={markers}
+        onMarkerPress={setDetail}
+        routeLines={routeLines}
+      />
 
       {/* 상단 검색 오버레이 (map은 빈 영역에서 계속 조작 가능하도록 box-none) */}
       <SafeAreaView
@@ -298,12 +343,49 @@ export default function HomeScreen() {
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="상세 닫기"
-                onPress={() => setDetail(null)}
+                onPress={closeDetail}
                 hitSlop={8}
               >
                 <X size={20} color={colors["text-muted"]} />
               </Pressable>
             </View>
+
+            {/* 경로가 그려졌을 때 색 범례 (최단=파랑, 그늘길=초록) */}
+            {routeLines.length > 0 && (
+              <View className="flex-row items-center gap-4 px-5 pb-1">
+                <View className="flex-row items-center gap-1.5">
+                  <View
+                    className="h-1 w-5 rounded-full"
+                    style={{ backgroundColor: ROUTE_COLORS.shortest }}
+                  />
+                  <Text className="text-body-sm text-text-secondary">최단</Text>
+                </View>
+                <View className="flex-row items-center gap-1.5">
+                  <View
+                    className="h-1 w-5 rounded-full"
+                    style={{ backgroundColor: ROUTE_COLORS.shady }}
+                  />
+                  <Text className="text-body-sm text-text-secondary">
+                    그늘길
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {/* 경로 안내: 내 위치 → 이 장소 경로(최단·그늘)를 지도에 그린다. */}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="경로 안내"
+              accessibilityState={{ disabled: routing, busy: routing }}
+              disabled={routing}
+              onPress={handleRoute}
+              className="mx-5 mb-2 mt-1 h-11 flex-row items-center justify-center gap-2 rounded-[8px] bg-primary active:bg-action-primary-hover"
+            >
+              <Navigation size={16} color={colors["on-action-primary"]} />
+              <Text className="text-label-lg text-on-action-primary">
+                {routing ? "경로 찾는 중…" : "경로 안내"}
+              </Text>
+            </Pressable>
           </SafeAreaView>
         </View>
       )}
