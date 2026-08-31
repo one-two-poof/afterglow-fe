@@ -9,6 +9,8 @@
  */
 import type { LatLng, MapPoint } from "@afterglow/utils";
 
+import type { MarkerDetail } from "@/components/MapLibreMap/types";
+
 /**
  * 코스 좌표(mapX=위도/mapY=경도) → 지도 좌표(lat/lng).
  * ⚠️ BE 장소용 toLatLng(mapX=경도)와 **반대 관례**다. ML 추천 서버의 코스 응답은
@@ -73,8 +75,29 @@ export interface SavedCourse extends RecommendedCourse {
   selectedAt: string;
 }
 
-/** 지도 마커 (좌표 + 라벨). 모바일 MapMarker와 호환된다. */
-export type CourseMarker = LatLng & { label: string };
+/** 지도 마커 (좌표 + 라벨 + 상세). 모바일 MapMarker와 호환된다. */
+export type CourseMarker = LatLng & { label: string; detail: MarkerDetail };
+
+/** 코스 장소(RecommendedPlace)를 마커 상세 카드용 정보로 변환. */
+const placeToDetail = (place: RecommendedPlace): MarkerDetail => {
+  const subtitle = [
+    place.place_category,
+    place.visit_order ? `${place.visit_order}번째 방문` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const description = [
+    place.dist_to_prev_km > 0 ? `이전 지점서 ${place.dist_to_prev_km}km` : "",
+    place.is_indoor === 1 ? "실내" : "실외",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return {
+    title: place.place_name,
+    subtitle: subtitle || undefined,
+    description: description || undefined,
+  };
+};
 
 /**
  * 추천 코스(RecommendedCourse)의 "출발지 → 도착지" 두 지점만 마커로 찍는다.
@@ -99,10 +122,12 @@ export function courseToMarkers(course: RecommendedCourse): CourseMarker[] {
     {
       ...courseToLatLng(first),
       label: `출발지${nameOf(first) ? ` · ${nameOf(first)}` : ""}`,
+      detail: { title: nameOf(first) || "출발지", subtitle: "출발지" },
     },
     {
       ...courseToLatLng(last),
       label: `도착지${nameOf(last) ? ` · ${nameOf(last)}` : ""}`,
+      detail: { title: nameOf(last) || "도착지", subtitle: "도착지" },
     },
   ];
 }
@@ -113,10 +138,15 @@ export function courseToMarkers(course: RecommendedCourse): CourseMarker[] {
  */
 export function savedCourseToMarkers(course: SavedCourse): CourseMarker[] {
   return course.daily_schedules.flatMap((day) => [
-    { ...courseToLatLng(day.start_location), label: day.start_location.name },
+    {
+      ...courseToLatLng(day.start_location),
+      label: day.start_location.name,
+      detail: { title: day.start_location.name, subtitle: "출발지" },
+    },
     ...day.places.map((place) => ({
       ...courseToLatLng(place),
       label: place.place_name,
+      detail: placeToDetail(place),
     })),
   ]);
 }

@@ -1,13 +1,18 @@
+import { useToastStore } from "@afterglow/stores";
 import { colors } from "@afterglow/tokens";
 import { Input, TagList } from "@afterglow/ui-native";
 import { toLatLng } from "@afterglow/utils";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { Plus, Search, X } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { MapLibreMap } from "@/components/MapLibreMap";
+import {
+  type MapMarker,
+  type MarkerDetail,
+} from "@/components/MapLibreMap/types";
 import { TripPlanPanel } from "@/components/TripPlanPanel";
 import { useAccessToken } from "@/hooks/use-access-token";
 import { useCategoryPlaces } from "@/hooks/use-category-places";
@@ -36,6 +41,14 @@ const PLACE_CATEGORIES: PlaceCategory[] = [
   "accommodation",
 ];
 
+/** 장소(Place) → 마커 상세 카드 정보. */
+const placeToDetail = (place: Place): MarkerDetail => ({
+  title: place.placeName,
+  subtitle: place.categoryName || place.categoryGroupName || undefined,
+  description: place.roadAddressName || place.addressName || undefined,
+  image: place.image || undefined,
+});
+
 /**
  * 홈 = 전체화면 지도 + 상단 검색 오버레이 + 하단 카테고리/코스 태그 + 여행 계획(+)
  * 버튼 (웹 홈과 동일 구조).
@@ -45,6 +58,8 @@ const PLACE_CATEGORIES: PlaceCategory[] = [
  * "전체"는 모든 마커를 해제한다.
  */
 export default function HomeScreen() {
+  const router = useRouter();
+  const showToast = useToastStore((s) => s.show);
   const [planOpen, setPlanOpen] = useState(false);
 
   const [search, setSearch] = useState("");
@@ -53,6 +68,8 @@ export default function HomeScreen() {
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   // 선택된 저장 코스 태그(selectionId 문자열) 또는 FILTER_ALL(해제).
   const [filter, setFilter] = useState(FILTER_ALL);
+  // 마커 클릭 시 하단에 띄울 상세. 마커 셋을 바꾸는 동작(검색/코스/카테고리 전환)에서 닫는다.
+  const [detail, setDetail] = useState<MapMarker | null>(null);
 
   const debouncedSearch = useDebounce(search, 300);
   const searchEnabled = searchOpen && debouncedSearch.trim() !== "";
@@ -97,24 +114,42 @@ export default function HomeScreen() {
     setSearchOpen(false);
   };
 
+  // 여행 계획(코스 추천)은 로그인 필요. 비로그인 시 안내 후 로그인 화면으로 유도.
+  const openPlan = () => {
+    if (!isAuthed) {
+      showToast("로그인 후 코스를 추천받을 수 있어요");
+      router.push("/my-page");
+      return;
+    }
+    setPlanOpen(true);
+  };
+
   const selectPlace = (place: Place) => {
     setSearch(place.placeName);
     setSearchOpen(false);
     setSelectedPlace(place);
     // 검색 장소를 고르면 코스 선택은 해제한다(마커 대상은 하나만).
     setFilter(FILTER_ALL);
+    setDetail(null);
   };
 
   // 코스 태그 선택 시: 검색 마커를 지우고 그 코스로 전환. FILTER_ALL이면 해제.
   const selectFilter = (value: string) => {
     setFilter(value);
     setSelectedPlace(null);
+    setDetail(null);
   };
 
   // 마커 우선순위: 검색 장소 → 선택 코스 → 선택 카테고리 (전체는 없음). 웹 홈과 동일.
-  const markers = useMemo(() => {
+  const markers = useMemo<MapMarker[]>(() => {
     if (selectedPlace) {
-      return [{ ...toLatLng(selectedPlace), label: selectedPlace.placeName }];
+      return [
+        {
+          ...toLatLng(selectedPlace),
+          label: selectedPlace.placeName,
+          detail: placeToDetail(selectedPlace),
+        },
+      ];
     }
     if (selectedCourse) {
       return savedCourseToMarkers(selectedCourse);
@@ -122,12 +157,13 @@ export default function HomeScreen() {
     return categoryPlaces.map((place) => ({
       ...toLatLng(place),
       label: place.placeName,
+      detail: placeToDetail(place),
     }));
   }, [selectedPlace, selectedCourse, categoryPlaces]);
 
   return (
     <View className="flex-1 bg-bg">
-      <MapLibreMap markers={markers} />
+      <MapLibreMap markers={markers} onMarkerPress={setDetail} />
 
       {/* 상단 검색 오버레이 (map은 빈 영역에서 계속 조작 가능하도록 box-none) */}
       <SafeAreaView
@@ -215,13 +251,62 @@ export default function HomeScreen() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="여행 계획 짜기"
-        onPress={() => setPlanOpen(true)}
+        onPress={openPlan}
         className="absolute bottom-24 right-5 size-14 items-center justify-center rounded-full bg-primary shadow-md active:bg-action-primary-hover"
       >
         <Plus size={28} color={colors["on-action-primary"]} />
       </Pressable>
 
       <TripPlanPanel open={planOpen} onClose={() => setPlanOpen(false)} />
+
+      {/* 마커 클릭 상세 카드 — 하단 오버레이(태그리스트 위). 닫으면 태그가 다시 보임. */}
+      {detail?.detail && (
+        <View pointerEvents="box-none" className="absolute inset-x-0 bottom-0">
+          <SafeAreaView
+            edges={["bottom"]}
+            className="rounded-t-[16px] bg-neutral-0 shadow-md"
+          >
+            <View className="flex-row items-start gap-3 px-5 pb-2 pt-4">
+              {detail.detail.image ? (
+                <Image
+                  source={{ uri: detail.detail.image }}
+                  accessibilityIgnoresInvertColors
+                  className="size-16 rounded-[8px] bg-surface-muted"
+                />
+              ) : null}
+              <View className="flex-1">
+                <Text numberOfLines={1} className="text-heading-sm text-text">
+                  {detail.detail.title}
+                </Text>
+                {detail.detail.subtitle ? (
+                  <Text
+                    numberOfLines={1}
+                    className="mt-1 text-body-sm text-text-secondary"
+                  >
+                    {detail.detail.subtitle}
+                  </Text>
+                ) : null}
+                {detail.detail.description ? (
+                  <Text
+                    numberOfLines={2}
+                    className="mt-0.5 text-body-sm text-text-muted"
+                  >
+                    {detail.detail.description}
+                  </Text>
+                ) : null}
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="상세 닫기"
+                onPress={() => setDetail(null)}
+                hitSlop={8}
+              >
+                <X size={20} color={colors["text-muted"]} />
+              </Pressable>
+            </View>
+          </SafeAreaView>
+        </View>
+      )}
     </View>
   );
 }
