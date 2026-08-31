@@ -2,14 +2,14 @@ import { colors } from "@afterglow/tokens";
 import {
   Camera,
   type CameraRef,
+  GeoJSONSource,
   Layer,
   Map,
-  Marker,
   VectorSource,
 } from "@maplibre/maplibre-react-native";
 import * as Location from "expo-location";
 import { LocateFixed } from "lucide-react-native";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { env } from "@/lib/env";
@@ -37,6 +37,21 @@ const SEOUL: [number, number] = [126.978, 37.5665];
  */
 export function MapLibreMap({ markers = [] }: MapLibreMapProps) {
   const cameraRef = useRef<CameraRef>(null);
+
+  // 마커를 개별 <Marker> 뷰 오버레이로 그리면 지점 수만큼 네이티브 View가 생기고
+  // 지도를 움직일 때마다 전부 재배치돼 느리다(카테고리는 전체를 받아 수십~수백 건).
+  // 하나의 GeoJSON 소스 + circle 레이어로 GPU에서 렌더해 지점이 많아도 매끄럽게 한다.
+  const markersGeoJSON = useMemo<GeoJSON.FeatureCollection>(
+    () => ({
+      type: "FeatureCollection",
+      features: markers.map((m) => ({
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [m.lng, m.lat] },
+        properties: {},
+      })),
+    }),
+    [markers],
+  );
   // 확보한 현위치([lng, lat]). 최초 포커스 + 나침반 버튼에서 재사용. (웹의 userLocationRef 대응)
   const userLocationRef = useRef<[number, number] | null>(null);
 
@@ -118,11 +133,20 @@ export function MapLibreMap({ markers = [] }: MapLibreMapProps) {
           />
         </VectorSource>
 
-        {markers.map((m, i) => (
-          <Marker key={`${m.lng},${m.lat},${i}`} id={`marker-${i}`} lngLat={[m.lng, m.lat]}>
-            <View className="size-4 rounded-full border-2 border-neutral-0 bg-primary" />
-          </Marker>
-        ))}
+        {markers.length > 0 && (
+          <GeoJSONSource id="place-markers" data={markersGeoJSON}>
+            <Layer
+              id="place-markers-circle"
+              type="circle"
+              paint={{
+                "circle-radius": 6,
+                "circle-color": colors.primary,
+                "circle-stroke-width": 2,
+                "circle-stroke-color": colors["neutral-0"],
+              }}
+            />
+          </GeoJSONSource>
+        )}
       </Map>
 
       <Pressable
