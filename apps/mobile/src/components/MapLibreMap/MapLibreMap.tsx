@@ -1,14 +1,16 @@
 import { colors } from "@afterglow/tokens";
+import { buildShadows } from "@afterglow/utils";
 import {
   Camera,
   type CameraRef,
   GeoJSONSource,
   Layer,
   Map,
+  type MapRef,
   VectorSource,
 } from "@maplibre/maplibre-react-native";
 import { LocateFixed } from "lucide-react-native";
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   type NativeSyntheticEvent,
   Pressable,
@@ -33,6 +35,13 @@ const BASEMAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 const BUILDINGS_PMTILES_URL = env.buildingsPmtilesUrl;
 const BUILDINGS_SOURCE_LAYER = "buildings";
 
+// 그림자(그늘) 색 — 웹과 동일(디자인 토큰 secondary-900). 반투명으로 지면에 깔린다.
+const SHADOW_COLOR = "#1c2b45";
+const EMPTY_SHADOWS: GeoJSON.FeatureCollection = {
+  type: "FeatureCollection",
+  features: [],
+};
+
 // [lng, lat] 서울시청 (기본값). MapLibre는 [lng, lat] 순서.
 const SEOUL: [number, number] = [126.978, 37.5665];
 
@@ -49,6 +58,41 @@ export function MapLibreMap({
   routeLines = [],
 }: MapLibreMapProps) {
   const cameraRef = useRef<CameraRef>(null);
+  const mapRef = useRef<MapRef>(null);
+
+  // 프론트에서 계산하는 건물 그림자(항상 "지금" 태양 기준). 뷰포트 이동마다 갱신.
+  const [shadows, setShadows] = useState<GeoJSON.FeatureCollection>(
+    EMPTY_SHADOWS,
+  );
+  // 초기 1회(타일 최초 렌더 완료) 그림자를 계산했는지.
+  const didInitialShadowRef = useRef(false);
+
+  // 뷰포트의 건물을 조회해 그림자 폴리곤을 계산한다.
+  const updateShadows = useCallback(async () => {
+    // 건물 레이어가 없으면(건물 pmtiles 미설정) 그림자도 없다.
+    if (!BUILDINGS_PMTILES_URL) {
+      return;
+    }
+    const map = mapRef.current;
+    if (!map) {
+      return;
+    }
+    try {
+      const [features, center] = await Promise.all([
+        map.queryRenderedFeatures({ layers: ["buildings-fill"] }),
+        map.getCenter(),
+      ]);
+      setShadows(
+        buildShadows(
+          features,
+          { lng: center[0], lat: center[1] },
+          new Date(),
+        ),
+      );
+    } catch {
+      // 쿼리 실패(스타일 미로드 등)는 다음 이동에서 다시 시도되므로 무시.
+    }
+  }, []);
 
   // 마커를 개별 <Marker> 뷰 오버레이로 그리면 지점 수만큼 네이티브 View가 생기고
   // 지도를 움직일 때마다 전부 재배치돼 느리다(카테고리는 전체를 받아 수십~수백 건).
@@ -166,13 +210,38 @@ export function MapLibreMap({
   return (
     <View style={StyleSheet.absoluteFill}>
       <Map
+        ref={mapRef}
         style={StyleSheet.absoluteFill}
         mapStyle={BASEMAP_STYLE_URL}
         // 웹의 attributionControl:false와 동일 — 정보(ⓘ) 버튼·로고 숨김
         attribution={false}
         logo={false}
+        // 이동/줌 종료 시 그림자 재계산
+        onRegionDidChange={() => void updateShadows()}
+        // 최초 타일 렌더 완료 시 1회 계산(정지 상태에서도 그림자가 뜨도록)
+        onDidFinishRenderingMapFully={() => {
+          if (didInitialShadowRef.current) {
+            return;
+          }
+          didInitialShadowRef.current = true;
+          void updateShadows();
+        }}
       >
         <Camera ref={cameraRef} initialViewState={{ center: SEOUL, zoom: 15 }} />
+
+        {/* 그림자를 건물보다 먼저 선언 → 건물이 그림자 위에 그려진다. */}
+        {BUILDINGS_PMTILES_URL ? (
+          <GeoJSONSource id="shadows" data={shadows}>
+            <Layer
+              id="buildings-shadow"
+              type="fill"
+              paint={{
+                "fill-color": SHADOW_COLOR,
+                "fill-opacity": 0.35,
+              }}
+            />
+          </GeoJSONSource>
+        ) : null}
 
         {BUILDINGS_PMTILES_URL ? (
           <VectorSource
