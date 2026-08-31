@@ -7,7 +7,6 @@ import {
   Map,
   VectorSource,
 } from "@maplibre/maplibre-react-native";
-import * as Location from "expo-location";
 import { LocateFixed } from "lucide-react-native";
 import { useEffect, useMemo, useRef } from "react";
 import {
@@ -18,6 +17,8 @@ import {
 } from "react-native";
 
 import { env } from "@/lib/env";
+import { getCurrentLocation } from "@/lib/location";
+import { ROUTE_COLORS } from "@/lib/route";
 
 import { type MapLibreMapProps } from "./types";
 
@@ -42,7 +43,11 @@ const SEOUL: [number, number] = [126.978, 37.5665];
  * ⚠️ 네이티브 전용(웹은 MapLibreMap.web.tsx). 건물 PMTiles 렌더 크래시(서버 no-store
  *    이슈)는 [[pmtiles-tile-caching]] 참고 — 백엔드 캐시헤더 수정 대기.
  */
-export function MapLibreMap({ markers = [], onMarkerPress }: MapLibreMapProps) {
+export function MapLibreMap({
+  markers = [],
+  onMarkerPress,
+  routeLines = [],
+}: MapLibreMapProps) {
   const cameraRef = useRef<CameraRef>(null);
 
   // 마커를 개별 <Marker> 뷰 오버레이로 그리면 지점 수만큼 네이티브 View가 생기고
@@ -60,24 +65,26 @@ export function MapLibreMap({ markers = [], onMarkerPress }: MapLibreMapProps) {
     }),
     [markers],
   );
+
+  // 경로(최단·그늘)를 LineString FeatureCollection으로. shady 여부를 실어 색을 구분.
+  const routesGeoJSON = useMemo<GeoJSON.FeatureCollection>(
+    () => ({
+      type: "FeatureCollection",
+      features: routeLines.map((line) => ({
+        type: "Feature",
+        properties: { shady: line.shady },
+        geometry: { type: "LineString", coordinates: line.coordinates },
+      })),
+    }),
+    [routeLines],
+  );
+
   // 확보한 현위치([lng, lat]). 최초 포커스 + 나침반 버튼에서 재사용. (웹의 userLocationRef 대응)
   const userLocationRef = useRef<[number, number] | null>(null);
   // 마커(검색/코스)로 카메라를 이미 옮겼는지. 진입 시 현위치 확보가 늦게 끝나면
   // 사용자가 검색으로 이동한 위치를 시뮬레이터 기본 위치(샌프란시스코) 등으로
   // 덮어쓰는 문제가 있어, 마커가 카메라를 잡은 뒤엔 초기 현위치 이동을 건너뛴다.
   const cameraLockedRef = useRef(false);
-
-  // 위치 권한을 요청하고 현재 좌표를 [lng, lat]로 반환한다. 거부/실패 시 null.
-  const getCurrentLocation = async (): Promise<[number, number] | null> => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
-      return null;
-    }
-    const pos = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.High,
-    });
-    return [pos.coords.longitude, pos.coords.latitude];
-  };
 
   // 마커(circle) 탭 → 인덱스로 원본 마커를 되찾아 상세를 호출부에 알린다.
   const handleMarkerPress = (
@@ -137,6 +144,25 @@ export function MapLibreMap({ markers = [], onMarkerPress }: MapLibreMapProps) {
     );
   }, [markers]);
 
+  // 경로가 그려지면 전체 경로가 보이도록 카메라 이동(패딩 줘서 잘리지 않게).
+  useEffect(() => {
+    if (routeLines.length === 0) {
+      return;
+    }
+    cameraLockedRef.current = true;
+    const coords = routeLines.flatMap((line) => line.coordinates);
+    if (coords.length === 0) {
+      return;
+    }
+    const lngs = coords.map((c) => c[0]!);
+    const lats = coords.map((c) => c[1]!);
+    cameraRef.current?.fitBounds(
+      [Math.min(...lngs), Math.min(...lats), Math.max(...lngs), Math.max(...lats)],
+      // 하단 상세 카드/범례에 가리지 않도록 아래쪽 패딩을 크게 준다.
+      { padding: { top: 80, right: 60, bottom: 220, left: 60 }, duration: 600 },
+    );
+  }, [routeLines]);
+
   return (
     <View style={StyleSheet.absoluteFill}>
       <Map
@@ -165,6 +191,27 @@ export function MapLibreMap({ markers = [], onMarkerPress }: MapLibreMapProps) {
             />
           </VectorSource>
         ) : null}
+
+        {routeLines.length > 0 && (
+          <GeoJSONSource id="routes" data={routesGeoJSON}>
+            <Layer
+              id="routes-line"
+              type="line"
+              layout={{ "line-cap": "round", "line-join": "round" }}
+              paint={{
+                // shady=초록(그늘길), 그 외=파랑(최단)
+                "line-color": [
+                  "case",
+                  ["get", "shady"],
+                  ROUTE_COLORS.shady,
+                  ROUTE_COLORS.shortest,
+                ],
+                "line-width": 5,
+                "line-opacity": 0.85,
+              }}
+            />
+          </GeoJSONSource>
+        )}
 
         {markers.length > 0 && (
           <GeoJSONSource

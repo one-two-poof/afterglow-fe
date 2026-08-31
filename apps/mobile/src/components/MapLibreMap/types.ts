@@ -1,3 +1,5 @@
+import type { RouteLine } from "@/lib/route";
+
 /** 마커 클릭 시 하단 카드에 표시할 상세 정보. */
 export interface MarkerDetail {
   title: string;
@@ -23,4 +25,6 @@ export interface MapLibreMapProps {
   markers?: MapMarker[];
   /** 마커 클릭 시 호출(상세 카드는 호출부에서 렌더). */
   onMarkerPress?: (marker: MapMarker) => void;
+  /** 그릴 경로들(최단·그늘). 색은 shady 여부로 구분. 바뀌면 경로가 보이도록 카메라 이동. */
+  routeLines?: RouteLine[];
 }
