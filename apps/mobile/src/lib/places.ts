@@ -16,13 +16,30 @@ const dedupeById = (places: Place[]): Place[] => {
   return [...byId.values()];
 };
 
+// 백엔드 지오코딩 실패분은 한국 밖 sentinel 좌표(예: mapX 117.99 / mapY 19.69)로
+// 내려온다. 실제 주소는 서울인데 좌표만 엉뚱해, 지도에 찍으면 마커가 바다에
+// 떨어지고 fitBounds가 지도를 엉뚱한 곳(서울~남중국해 중간)으로 끌고 간다.
+// 한국 대략 경계를 벗어난 좌표는 표시 대상에서 제외한다.
+const KOREA_BOUNDS = { minLng: 124, maxLng: 132, minLat: 33, maxLat: 39 };
+const hasValidKoreaCoord = (p: Place): boolean =>
+  typeof p.mapX === "number" &&
+  typeof p.mapY === "number" &&
+  p.mapX >= KOREA_BOUNDS.minLng &&
+  p.mapX <= KOREA_BOUNDS.maxLng &&
+  p.mapY >= KOREA_BOUNDS.minLat &&
+  p.mapY <= KOREA_BOUNDS.maxLat;
+
+/** 중복 제거 + 지도에 찍을 수 없는(한국 밖) 좌표 제외. */
+const sanitize = (places: Place[]): Place[] =>
+  dedupeById(places).filter(hasValidKoreaCoord);
+
 /** 장소 목록 조회. name으로 검색, 생략 시 전체 조회. */
 export async function fetchPlaces(name?: string): Promise<Place[]> {
   const { data } = await apiClient.get<Place[]>("/api/places", {
     params: name ? { name } : undefined,
   });
-  // 백엔드가 같은 장소를 중복으로 내려줄 수 있어 id 기준으로 제거
-  return dedupeById(data);
+  // 중복 제거 + 잘못된(한국 밖) 좌표 제외
+  return sanitize(data);
 }
 
 /** 지도 카테고리 필터 종류 (웹 lib/places와 동일). */
@@ -36,7 +53,7 @@ const fetchPlacesByCategory = async (
   const { data } = await apiClient.get<Place[]>(`/api/places/${category}`, {
     params: name ? { name } : undefined,
   });
-  return dedupeById(data);
+  return sanitize(data);
 };
 
 /** 병원 목록 (name 생략 시 전체) */
