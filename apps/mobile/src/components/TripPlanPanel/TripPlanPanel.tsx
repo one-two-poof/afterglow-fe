@@ -3,6 +3,7 @@ import { Button } from "@afterglow/ui-native";
 import { ArrowLeft } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import {
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -13,6 +14,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+import { useMe } from "@/hooks/use-me";
 
 import { useRecommendCourses } from "./hooks/use-recommend-courses";
 import { useTripPlanForm } from "./hooks/use-trip-plan-form";
@@ -38,6 +41,9 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
   const [phase, setPhase] = useState<"form" | "result">("form");
   // 현재 보고 있는 rank 인덱스 (건너뛰기로 증가)
   const [rankIndex, setRankIndex] = useState(0);
+
+  // 헤더 아바타용 로그인 사용자. 패널은 로그인 상태에서만 열리므로 open일 때만 조회.
+  const { data: me } = useMe(open);
 
   const recommendMutation = useRecommendCourses();
   const recommendations = recommendMutation.data ?? [];
@@ -148,9 +154,14 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
                 <Text className="text-heading-sm text-text">
                   {phase === "result" ? "추천 코스" : current.title}
                 </Text>
-                <View className="ml-auto size-8 items-center justify-center rounded-full bg-primary-100">
-                  <Text className="text-label-sm text-primary-700">이</Text>
-                </View>
+                {/* 로그인 사용자 프로필 이미지. 이미지가 없으면 표시하지 않는다. */}
+                {me?.profileImageUrl ? (
+                  <Image
+                    source={{ uri: me.profileImageUrl }}
+                    accessibilityIgnoresInvertColors
+                    className="ml-auto size-8 rounded-full border border-border"
+                  />
+                ) : null}
               </View>
 
               <ScrollView

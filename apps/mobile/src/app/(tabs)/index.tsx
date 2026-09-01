@@ -4,8 +4,15 @@ import { Input, TagList } from "@afterglow/ui-native";
 import { toLatLng } from "@afterglow/utils";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Navigation, Plus, Search, X } from "lucide-react-native";
-import { useCallback, useMemo, useState } from "react";
-import { Image, Pressable, ScrollView, Text, View } from "react-native";
+import { useCallback, useMemo, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { MapLibreMap } from "@/components/MapLibreMap";
@@ -75,6 +82,15 @@ export default function HomeScreen() {
   // 경로 안내로 그린 경로(최단·그늘). 상세/마커가 바뀌면 지운다.
   const [routeLines, setRouteLines] = useState<RouteLine[]>([]);
   const [routing, setRouting] = useState(false);
+  // 진행 중인 경로 요청 취소용. 카드 닫기·다른 대상 선택 시 abort한다.
+  const routeAbortRef = useRef<AbortController | null>(null);
+
+  // 진행 중인 경로 요청이 있으면 취소하고 로딩 상태를 내린다.
+  const cancelRoute = useCallback(() => {
+    routeAbortRef.current?.abort();
+    routeAbortRef.current = null;
+    setRouting(false);
+  }, []);
 
   const debouncedSearch = useDebounce(search, 300);
   const searchEnabled = searchOpen && debouncedSearch.trim() !== "";
@@ -137,6 +153,7 @@ export default function HomeScreen() {
     setFilter(FILTER_ALL);
     setDetail(null);
     setRouteLines([]);
+    cancelRoute();
   };
 
   // 코스 태그 선택 시: 검색 마커를 지우고 그 코스로 전환. FILTER_ALL이면 해제.
@@ -145,22 +162,30 @@ export default function HomeScreen() {
     setSelectedPlace(null);
     setDetail(null);
     setRouteLines([]);
+    cancelRoute();
   };
 
-  // 상세 카드 닫기: 상세와 그린 경로를 함께 정리.
+  // 상세 카드 닫기: 상세와 그린 경로를 정리하고 진행 중 경로 요청은 취소한다.
   const closeDetail = () => {
     setDetail(null);
     setRouteLines([]);
+    cancelRoute();
   };
 
   // 경로 안내: 내 위치 → 선택 장소 경로(최단·그늘)를 조회해 지도에 그린다.
+  // 진행 중에 카드 닫기·다른 대상 선택 시 취소되며, 취소된 요청 결과는 무시한다.
   const handleRoute = async () => {
     if (!detail || routing) {
       return;
     }
+    const controller = new AbortController();
+    routeAbortRef.current = controller;
     setRouting(true);
     try {
       const loc = await getCurrentLocation();
+      if (controller.signal.aborted) {
+        return;
+      }
       if (!loc) {
         showToast("위치 권한이 필요해요");
         return;
@@ -168,16 +193,27 @@ export default function HomeScreen() {
       const lines = await fetchRouteLines(
         { lat: loc[1], lng: loc[0] },
         { lat: detail.lat, lng: detail.lng },
+        controller.signal,
       );
+      if (controller.signal.aborted) {
+        return;
+      }
       if (lines.length === 0) {
         showToast("경로를 찾지 못했어요");
         return;
       }
       setRouteLines(lines);
     } catch {
-      showToast("경로를 불러오지 못했어요");
+      // 취소로 인한 에러는 사용자가 의도한 것이므로 알리지 않는다.
+      if (!controller.signal.aborted) {
+        showToast("경로를 불러오지 못했어요");
+      }
     } finally {
-      setRouting(false);
+      // 취소(cancelRoute)로 이미 다른 요청이 시작됐다면 그쪽 상태를 건드리지 않는다.
+      if (routeAbortRef.current === controller) {
+        routeAbortRef.current = null;
+        setRouting(false);
+      }
     }
   };
 
@@ -372,17 +408,38 @@ export default function HomeScreen() {
               </View>
             )}
 
-            {/* 경로 안내: 내 위치 → 이 장소 경로(최단·그늘)를 지도에 그린다. */}
+            {/* 경로 안내: 내 위치 → 이 장소 경로(최단·그늘)를 지도에 그린다.
+                진행 중에는 disabled 색으로 바꾸고 스피너를 띄운다. 조건부 배경색은
+                className 대신 style로 처리해 css-interop 크래시를 피한다. */}
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="경로 안내"
               accessibilityState={{ disabled: routing, busy: routing }}
               disabled={routing}
               onPress={handleRoute}
+              style={
+                routing
+                  ? { backgroundColor: colors["action-disabled"] }
+                  : undefined
+              }
               className="mx-5 mb-2 mt-1 h-11 flex-row items-center justify-center gap-2 rounded-[8px] bg-primary active:bg-action-primary-hover"
             >
-              <Navigation size={16} color={colors["on-action-primary"]} />
-              <Text className="text-label-lg text-on-action-primary">
+              {routing ? (
+                <ActivityIndicator
+                  size="small"
+                  color={colors["on-action-disabled"]}
+                />
+              ) : (
+                <Navigation size={16} color={colors["on-action-primary"]} />
+              )}
+              <Text
+                className="text-label-lg"
+                style={{
+                  color: routing
+                    ? colors["on-action-disabled"]
+                    : colors["on-action-primary"],
+                }}
+              >
                 {routing ? "경로 찾는 중…" : "경로 안내"}
               </Text>
             </Pressable>
