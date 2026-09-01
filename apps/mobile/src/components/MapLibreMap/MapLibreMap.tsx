@@ -37,6 +37,10 @@ const BUILDINGS_SOURCE_LAYER = "buildings";
 
 // 그림자(그늘) 색 — 웹과 동일(디자인 토큰 secondary-900). 반투명으로 지면에 깔린다.
 const SHADOW_COLOR = "#1c2b45";
+
+// 경로 지점 핀 색: 시작=보라, 도착=빨강 (경로 라인 파랑/초록과 겹치지 않게).
+const ROUTE_PIN_START = "#7c3aed";
+const ROUTE_PIN_END = "#ef4444";
 const EMPTY_SHADOWS: GeoJSON.FeatureCollection = {
   type: "FeatureCollection",
   features: [],
@@ -56,6 +60,8 @@ export function MapLibreMap({
   markers = [],
   onMarkerPress,
   routeLines = [],
+  routePins = [],
+  onMapPress,
 }: MapLibreMapProps) {
   const cameraRef = useRef<CameraRef>(null);
   const mapRef = useRef<MapRef>(null);
@@ -121,6 +127,31 @@ export function MapLibreMap({
       })),
     }),
     [routeLines],
+  );
+
+  // 경로 시작/도착 핀 — 시작(start) 여부를 실어 색을 구분.
+  const routePinsGeoJSON = useMemo<GeoJSON.FeatureCollection>(
+    () => ({
+      type: "FeatureCollection",
+      features: routePins.map((pin) => ({
+        type: "Feature",
+        properties: { start: pin.kind === "start" },
+        geometry: { type: "Point", coordinates: [pin.lng, pin.lat] },
+      })),
+    }),
+    [routePins],
+  );
+
+  // 지도 탭 → 좌표를 {lat,lng}로 호출부에 전달(지점 선택 모드에서만 연결됨).
+  // Map onPress의 nativeEvent.lngLat은 [lng, lat] 순서.
+  const handleMapPress = useCallback(
+    (e: NativeSyntheticEvent<{ lngLat: [number, number] }>) => {
+      const coords = e.nativeEvent?.lngLat;
+      if (Array.isArray(coords) && coords.length >= 2) {
+        onMapPress?.({ lng: coords[0]!, lat: coords[1]! });
+      }
+    },
+    [onMapPress],
   );
 
   // 확보한 현위치([lng, lat]). 최초 포커스 + 나침반 버튼에서 재사용. (웹의 userLocationRef 대응)
@@ -216,6 +247,8 @@ export function MapLibreMap({
         // 웹의 attributionControl:false와 동일 — 정보(ⓘ) 버튼·로고 숨김
         attribution={false}
         logo={false}
+        // 지점 선택 모드에서만 지도 탭 좌표를 전달(평소엔 미연결).
+        onPress={onMapPress ? handleMapPress : undefined}
         // 이동/줌 종료 시 그림자 재계산
         onRegionDidChange={() => void updateShadows()}
         // 최초 타일 렌더 완료 시 1회 계산(정지 상태에서도 그림자가 뜨도록)
@@ -295,6 +328,27 @@ export function MapLibreMap({
                 "circle-radius": 6,
                 "circle-color": colors.primary,
                 "circle-stroke-width": 2,
+                "circle-stroke-color": colors["neutral-0"],
+              }}
+            />
+          </GeoJSONSource>
+        )}
+
+        {/* 경로 시작/도착 핀 — 마커 위에 올려 잘 보이게. 시작=보라, 도착=빨강 */}
+        {routePins.length > 0 && (
+          <GeoJSONSource id="route-pins" data={routePinsGeoJSON}>
+            <Layer
+              id="route-pins-circle"
+              type="circle"
+              paint={{
+                "circle-radius": 9,
+                "circle-color": [
+                  "case",
+                  ["get", "start"],
+                  ROUTE_PIN_START,
+                  ROUTE_PIN_END,
+                ],
+                "circle-stroke-width": 3,
                 "circle-stroke-color": colors["neutral-0"],
               }}
             />
