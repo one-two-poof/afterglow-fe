@@ -2,6 +2,7 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
 export { toLatLng, type MapPoint, type LatLng } from "./geo";
+export { buildShadows } from "./shadows";
 export * from "./date-utils";
 
 /**

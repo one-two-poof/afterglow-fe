@@ -2,15 +2,13 @@
 
 // maplibre-gl v5 사용: v6는 워커를 별도 ES 모듈(maplibre-gl-worker.mjs)로 분리하는데
 // Next.js 번들러가 이 워커 청크를 서빙하지 못해 404 → 지도가 로드되지 않음
-import type { LatLng } from "@afterglow/utils";
+import { buildShadows, type LatLng } from "@afterglow/utils";
 import { LocateFixed } from "lucide-react";
 import * as maplibregl from "maplibre-gl";
 import { Protocol } from "pmtiles";
 import { useEffect, useRef } from "react";
 
 import type { RouteLine } from "@/lib/route";
-
-import { buildShadows } from "./shadows";
 
 // MapLibre 스타일이 정상 렌더되려면 CSS를 먼저 로드해야 함
 // Source: https://maplibre.org/maplibre-gl-js/docs/ (Quickstart)
