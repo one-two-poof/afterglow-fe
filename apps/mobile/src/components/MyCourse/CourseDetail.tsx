@@ -1,10 +1,8 @@
 import { Button } from "@afterglow/ui-native";
-import { colors } from "@afterglow/tokens";
 import { useRouter } from "expo-router";
-import { ChevronLeft } from "lucide-react-native";
-import { Pressable, ScrollView, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { ScrollView, Text, View } from "react-native";
 
+import { ScreenHeader } from "@/components/ScreenHeader";
 import { useAccessToken } from "@/hooks/use-access-token";
 import { useRecommendations } from "@/hooks/use-recommendations";
 import { courseTitle } from "@/types/recommendation";
@@ -12,35 +10,12 @@ import { courseTitle } from "@/types/recommendation";
 import { CourseItinerary } from "./CourseItinerary";
 import { MyCourseSkeleton } from "./MyCourseSkeleton";
 
-/** 상단 고정 헤더 (뒤로가기 + 제목). */
-function DetailHeader({ title }: { title: string }) {
-  const router = useRouter();
-  return (
-    <SafeAreaView edges={["top"]} className="bg-bg">
-      <View className="flex-row items-center gap-2 border-b border-border px-2 py-2">
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="뒤로 가기"
-          onPress={() => router.back()}
-          hitSlop={8}
-          className="size-10 items-center justify-center rounded-full active:bg-surface-muted"
-        >
-          <ChevronLeft size={24} color={colors.text} />
-        </Pressable>
-        <Text numberOfLines={1} className="flex-1 text-label-lg text-text">
-          {title}
-        </Text>
-      </View>
-    </SafeAreaView>
-  );
-}
-
 /** 코스를 찾지 못했을 때(캐시 없음/삭제됨 등)의 안내 화면. */
 function NotFound() {
   const router = useRouter();
   return (
     <View className="flex-1 bg-bg">
-      <DetailHeader title="코스 상세" />
+      <ScreenHeader title="코스 상세" />
       <View className="flex-1 items-center justify-center gap-4 px-6">
         <View className="items-center gap-2">
           <Text className="text-heading-sm text-text">코스를 찾을 수 없어요</Text>
@@ -70,7 +45,7 @@ export function CourseDetail({ selectionId }: { selectionId: number }) {
   if (token === undefined || (isAuthed && isLoading && !course)) {
     return (
       <View className="flex-1 bg-bg">
-        <DetailHeader title="코스 상세" />
+        <ScreenHeader title="코스 상세" />
         <MyCourseSkeleton />
       </View>
     );
@@ -84,7 +59,7 @@ export function CourseDetail({ selectionId }: { selectionId: number }) {
 
   return (
     <View className="flex-1 bg-bg">
-      <DetailHeader title={title} />
+      <ScreenHeader title={title} />
       <ScrollView contentContainerClassName="gap-4 px-5 py-5 pb-10">
         <Text className="text-heading-sm text-text">{title}</Text>
         <CourseItinerary course={course} />
