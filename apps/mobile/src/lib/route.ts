@@ -60,26 +60,36 @@ export const ROUTE_COLORS = {
 /** label에 "shad" 포함 → 그늘 경로로 판정 (백엔드: "shortest" / "shady") */
 const isShady = (label: string): boolean => /shad/i.test(label);
 
-/** 한 구간(from→to) 경로 조회. */
-export async function fetchRoute(req: RouteRequest): Promise<RouteResponse> {
-  const { data } = await apiClient.post<RouteResponse>("/api/route", req);
+/** 한 구간(from→to) 경로 조회. signal로 진행 중 요청을 취소할 수 있다. */
+export async function fetchRoute(
+  req: RouteRequest,
+  signal?: AbortSignal,
+): Promise<RouteResponse> {
+  const { data } = await apiClient.post<RouteResponse>("/api/route", req, {
+    signal,
+  });
   return data;
 }
 
 /**
  * 내 위치 → 장소 경로를 조회해 지도에 그릴 라인들로 변환한다.
- * @param from 출발(내 위치) 위경도
- * @param to   도착(장소) 위경도
+ * @param from   출발(내 위치) 위경도
+ * @param to     도착(장소) 위경도
+ * @param signal 진행 중 요청 취소용 AbortSignal
  */
 export async function fetchRouteLines(
   from: LatLng,
   to: LatLng,
+  signal?: AbortSignal,
 ): Promise<RouteLine[]> {
-  const res = await fetchRoute({
-    from: { lat: from.lat, lon: from.lng },
-    to: { lat: to.lat, lon: to.lng },
-    at: new Date().toISOString(),
-  });
+  const res = await fetchRoute(
+    {
+      from: { lat: from.lat, lon: from.lng },
+      to: { lat: to.lat, lon: to.lng },
+      at: new Date().toISOString(),
+    },
+    signal,
+  );
 
   return res.routes
     .filter((route) => route.geometry?.coordinates?.length)

@@ -5,13 +5,13 @@ import { ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAccessToken } from "@/hooks/use-access-token";
+import { useMe } from "@/hooks/use-me";
 import { clearAccessToken, UnauthorizedError } from "@/lib/auth";
 
 import { LoginPrompt } from "./LoginPrompt";
 import { MyPageSkeleton } from "./MyPageSkeleton";
 import { ProfileHeader } from "./ProfileHeader";
 import { SettingsList } from "./SettingsList";
-import { useMe } from "./use-me";
 
 /**
  * 내 정보 컨테이너. 웹 MyPage의 RN 버전.

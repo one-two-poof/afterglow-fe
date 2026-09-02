@@ -20,6 +20,19 @@ export interface MapMarker {
   detail?: MarkerDetail;
 }
 
+/** 경로 시작/도착 지점 핀. 색으로 시작(start)·도착(end)을 구분한다. */
+export interface RoutePin {
+  lat: number;
+  lng: number;
+  kind: "start" | "end";
+}
+
+/** MapLibreMap 임퍼러티브 핸들. 지점 선택(중앙 십자선) 확정 등에 사용. */
+export interface MapLibreMapRef {
+  /** 현재 지도 중앙 좌표(없으면 null). */
+  getCenter: () => Promise<{ lat: number; lng: number } | null>;
+}
+
 export interface MapLibreMapProps {
   /** 지도에 표시할 마커들. 바뀌면 그 마커들이 보이도록 카메라가 이동한다. */
   markers?: MapMarker[];
@@ -27,4 +40,6 @@ export interface MapLibreMapProps {
   onMarkerPress?: (marker: MapMarker) => void;
   /** 그릴 경로들(최단·그늘). 색은 shady 여부로 구분. 바뀌면 경로가 보이도록 카메라 이동. */
   routeLines?: RouteLine[];
+  /** 경로 시작·도착 지점 핀(경로 설정 중 표시). */
+  routePins?: RoutePin[];
 }
