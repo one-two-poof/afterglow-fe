@@ -4,6 +4,7 @@ import { Input, TagList } from "@afterglow/ui-native";
 import { toLatLng } from "@afterglow/utils";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
+  Crosshair,
   Flag,
   LocateFixed,
   MapPin,
@@ -25,6 +26,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { MapLibreMap } from "@/components/MapLibreMap";
 import {
+  type MapLibreMapRef,
   type MapMarker,
   type MarkerDetail,
   type RoutePin,
@@ -96,6 +98,8 @@ export default function HomeScreen() {
   const [routing, setRouting] = useState(false);
   // 진행 중인 경로 요청 취소용. 카드 닫기·다른 대상 선택 시 abort한다.
   const routeAbortRef = useRef<AbortController | null>(null);
+  // 지도 중앙 좌표를 읽기 위한 핸들(지점 선택 십자선 확정용).
+  const mapRef = useRef<MapLibreMapRef>(null);
 
   // 경로 설정 패널: "경로 안내"를 누르면 열려 시작지·도착지를 정한 뒤 경로를 찾는다.
   const [routePlanOpen, setRoutePlanOpen] = useState(false);
@@ -229,14 +233,24 @@ export default function HomeScreen() {
     setRouteLines([]);
   };
 
-  // 지도 탭 → 지정 중인 지점(시작/도착)에 좌표를 넣고 지정 모드 종료.
-  const handleMapPress = (coord: LatLngPoint) => {
+  // 지정 중인 지점(시작/도착)에 좌표를 넣고 지정 모드 종료.
+  const applyPicked = (coord: LatLngPoint) => {
     if (picking === "start") {
       setStartPoint(coord);
-      setPicking(null);
     } else if (picking === "end") {
       setEndPoint(coord);
-      setPicking(null);
+    }
+    setPicking(null);
+  };
+
+  // 지도 탭 → 그 지점으로 지정(기기/아키텍처에 따라 탭이 안 잡힐 수 있어 십자선 방식 병행).
+  const handleMapPress = (coord: LatLngPoint) => applyPicked(coord);
+
+  // 중앙 십자선 확정 → 현재 지도 중앙 좌표로 지정(탭 이벤트에 의존하지 않는 확실한 경로).
+  const confirmPick = async () => {
+    const center = await mapRef.current?.getCenter();
+    if (center) {
+      applyPicked(center);
     }
   };
 
@@ -331,6 +345,7 @@ export default function HomeScreen() {
   return (
     <View className="flex-1 bg-bg">
       <MapLibreMap
+        ref={mapRef}
         markers={markers}
         onMarkerPress={setDetail}
         routeLines={routeLines}
@@ -338,6 +353,21 @@ export default function HomeScreen() {
         // 지점 지정 모드에서만 지도 탭을 받는다(평소 탭은 무시).
         onMapPress={picking ? handleMapPress : undefined}
       />
+
+      {/* 지점 지정 중: 지도 중앙 고정 십자선. 지도를 움직여 원하는 곳에 맞춘다.
+          touch를 막지 않도록 pointerEvents=none. */}
+      {routePlanOpen && picking && (
+        <View
+          pointerEvents="none"
+          className="absolute inset-0 items-center justify-center"
+        >
+          <Crosshair
+            size={40}
+            color={picking === "start" ? "#7c3aed" : "#ef4444"}
+            strokeWidth={2.5}
+          />
+        </View>
+      )}
 
       {/* 상단 검색 오버레이 (map은 빈 영역에서 계속 조작 가능하도록 box-none) */}
       <SafeAreaView
@@ -355,7 +385,10 @@ export default function HomeScreen() {
             leftIcon={<Search size={18} color={colors["text-muted"]} />}
             rightIcon={
               search ? (
-                <Pressable accessibilityLabel="검색어 지우기" onPress={clearSearch}>
+                <Pressable
+                  accessibilityLabel="검색어 지우기"
+                  onPress={clearSearch}
+                >
                   <X size={18} color={colors["text-muted"]} />
                 </Pressable>
               ) : undefined
@@ -426,7 +459,7 @@ export default function HomeScreen() {
         accessibilityRole="button"
         accessibilityLabel="여행 계획 짜기"
         onPress={openPlan}
-        className="absolute bottom-24 right-5 size-14 items-center justify-center rounded-full bg-primary shadow-md active:bg-action-primary-hover"
+        className="absolute right-5 bottom-24 size-14 items-center justify-center rounded-full bg-primary shadow-md active:bg-action-primary-hover"
       >
         <Plus size={28} color={colors["on-action-primary"]} />
       </Pressable>
@@ -440,7 +473,7 @@ export default function HomeScreen() {
             edges={["bottom"]}
             className="rounded-t-[16px] bg-neutral-0 shadow-md"
           >
-            <View className="flex-row items-start gap-3 px-5 pb-2 pt-4">
+            <View className="flex-row items-start gap-3 px-5 pt-4 pb-2">
               {detail.detail.image ? (
                 <Image
                   source={{ uri: detail.detail.image }}
@@ -484,7 +517,7 @@ export default function HomeScreen() {
               accessibilityRole="button"
               accessibilityLabel="경로 안내"
               onPress={openRoutePlan}
-              className="mx-5 mb-2 mt-1 h-11 flex-row items-center justify-center gap-2 rounded-[8px] bg-primary active:bg-action-primary-hover"
+              className="mx-5 mt-1 mb-2 h-11 flex-row items-center justify-center gap-2 rounded-[8px] bg-primary active:bg-action-primary-hover"
             >
               <Navigation size={16} color={colors["on-action-primary"]} />
               <Text className="text-label-lg text-on-action-primary">
@@ -495,18 +528,19 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* 지점 지정 안내 바 — 지도가 대부분 보이도록 하단에 얇게. 탭하면 좌표가 잡힌다. */}
+      {/* 지점 지정 안내 바 — 지도가 대부분 보이도록 하단에 얇게. 지도를 움직여 중앙
+          십자선에 맞춘 뒤 "이 위치로 지정"(또는 지도 탭)으로 좌표를 확정한다. */}
       {routePlanOpen && picking && (
         <View pointerEvents="box-none" className="absolute inset-x-0 bottom-0">
           <SafeAreaView
             edges={["bottom"]}
             className="rounded-t-[16px] bg-neutral-0 shadow-md"
           >
-            <View className="flex-row items-center gap-3 px-5 py-4">
-              <MapPin size={18} color={colors.primary} />
+            <View className="flex-row items-center gap-2 px-5 pt-4 pb-1">
+              <MapPin size={16} color={colors.primary} />
               <Text className="flex-1 text-body-md text-text">
-                지도를 탭해 {picking === "start" ? "시작지" : "도착지"}를
-                지정하세요
+                {picking === "start" ? "시작지" : "도착지"}를 지도 중앙에 맞춰
+                주세요
               </Text>
               <Pressable
                 accessibilityRole="button"
@@ -517,6 +551,17 @@ export default function HomeScreen() {
                 <Text className="text-label-lg text-text-muted">취소</Text>
               </Pressable>
             </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="이 위치로 지정"
+              onPress={() => void confirmPick()}
+              className="mx-5 mt-2 mb-2 h-11 flex-row items-center justify-center gap-2 rounded-[8px] bg-primary active:bg-action-primary-hover"
+            >
+              <Crosshair size={16} color={colors["on-action-primary"]} />
+              <Text className="text-label-lg text-on-action-primary">
+                이 위치로 지정
+              </Text>
+            </Pressable>
           </SafeAreaView>
         </View>
       )}
@@ -528,8 +573,10 @@ export default function HomeScreen() {
             edges={["bottom"]}
             className="rounded-t-[16px] bg-neutral-0 shadow-md"
           >
-            <View className="flex-row items-center gap-2 px-5 pb-1 pt-4">
-              <Text className="flex-1 text-heading-sm text-text">경로 설정</Text>
+            <View className="flex-row items-center gap-2 px-5 pt-4 pb-1">
+              <Text className="flex-1 text-heading-sm text-text">
+                경로 설정
+              </Text>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="경로 설정 닫기"
@@ -617,7 +664,10 @@ export default function HomeScreen() {
               <View className="flex-row items-center gap-2">
                 <View className="flex-1 flex-row items-center gap-1.5">
                   <Flag size={15} color={colors.text} />
-                  <Text numberOfLines={1} className="flex-1 text-body-md text-text">
+                  <Text
+                    numberOfLines={1}
+                    className="flex-1 text-body-md text-text"
+                  >
                     {endPoint?.label ?? "지도에서 선택한 지점"}
                   </Text>
                 </View>
@@ -668,7 +718,7 @@ export default function HomeScreen() {
                   ? { backgroundColor: colors["action-disabled"] }
                   : undefined
               }
-              className="mx-5 mb-2 mt-4 h-11 flex-row items-center justify-center gap-2 rounded-[8px] bg-primary active:bg-action-primary-hover"
+              className="mx-5 mt-4 mb-2 h-11 flex-row items-center justify-center gap-2 rounded-[8px] bg-primary active:bg-action-primary-hover"
             >
               {routing ? (
                 <ActivityIndicator

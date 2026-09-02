@@ -27,6 +27,12 @@ export interface RoutePin {
   kind: "start" | "end";
 }
 
+/** MapLibreMap 임퍼러티브 핸들. 지점 선택(중앙 십자선) 확정 등에 사용. */
+export interface MapLibreMapRef {
+  /** 현재 지도 중앙 좌표(없으면 null). */
+  getCenter: () => Promise<{ lat: number; lng: number } | null>;
+}
+
 export interface MapLibreMapProps {
   /** 지도에 표시할 마커들. 바뀌면 그 마커들이 보이도록 카메라가 이동한다. */
   markers?: MapMarker[];
