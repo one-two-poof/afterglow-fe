@@ -109,7 +109,7 @@ export default function HomeScreen() {
   const [endPoint, setEndPoint] = useState<
     (LatLngPoint & { label?: string }) | null
   >(null);
-  // 지도 탭으로 지정 중인 지점. null이면 지정 모드 아님.
+  // 중앙 십자선으로 지정 중인 지점. null이면 지정 모드 아님.
   const [picking, setPicking] = useState<"start" | "end" | null>(null);
 
   // 진행 중인 경로 요청이 있으면 취소하고 로딩 상태를 내린다.
@@ -233,25 +233,18 @@ export default function HomeScreen() {
     setRouteLines([]);
   };
 
-  // 지정 중인 지점(시작/도착)에 좌표를 넣고 지정 모드 종료.
-  const applyPicked = (coord: LatLngPoint) => {
-    if (picking === "start") {
-      setStartPoint(coord);
-    } else if (picking === "end") {
-      setEndPoint(coord);
-    }
-    setPicking(null);
-  };
-
-  // 지도 탭 → 그 지점으로 지정(기기/아키텍처에 따라 탭이 안 잡힐 수 있어 십자선 방식 병행).
-  const handleMapPress = (coord: LatLngPoint) => applyPicked(coord);
-
-  // 중앙 십자선 확정 → 현재 지도 중앙 좌표로 지정(탭 이벤트에 의존하지 않는 확실한 경로).
+  // 중앙 십자선 확정 → 현재 지도 중앙 좌표를 지정 중인 지점(시작/도착)에 넣고 종료.
   const confirmPick = async () => {
     const center = await mapRef.current?.getCenter();
-    if (center) {
-      applyPicked(center);
+    if (!center) {
+      return;
     }
+    if (picking === "start") {
+      setStartPoint(center);
+    } else if (picking === "end") {
+      setEndPoint(center);
+    }
+    setPicking(null);
   };
 
   // 경로 찾기: 시작지(현위치 or 지정) → 도착지 경로(최단·그늘)를 조회해 지도에 그린다.
@@ -350,8 +343,6 @@ export default function HomeScreen() {
         onMarkerPress={setDetail}
         routeLines={routeLines}
         routePins={routePins}
-        // 지점 지정 모드에서만 지도 탭을 받는다(평소 탭은 무시).
-        onMapPress={picking ? handleMapPress : undefined}
       />
 
       {/* 지점 지정 중: 지도 중앙 고정 십자선. 지도를 움직여 원하는 곳에 맞춘다.
@@ -529,7 +520,7 @@ export default function HomeScreen() {
       )}
 
       {/* 지점 지정 안내 바 — 지도가 대부분 보이도록 하단에 얇게. 지도를 움직여 중앙
-          십자선에 맞춘 뒤 "이 위치로 지정"(또는 지도 탭)으로 좌표를 확정한다. */}
+          십자선에 맞춘 뒤 "이 위치로 지정"으로 좌표를 확정한다. */}
       {routePlanOpen && picking && (
         <View pointerEvents="box-none" className="absolute inset-x-0 bottom-0">
           <SafeAreaView

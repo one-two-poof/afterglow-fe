@@ -66,13 +66,7 @@ const SEOUL: [number, number] = [126.978, 37.5665];
  */
 export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
   function MapLibreMap(
-    {
-      markers = [],
-      onMarkerPress,
-      routeLines = [],
-      routePins = [],
-      onMapPress,
-    },
+    { markers = [], onMarkerPress, routeLines = [], routePins = [] },
     ref,
   ) {
     const cameraRef = useRef<CameraRef>(null);
@@ -171,18 +165,6 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
         })),
       }),
       [routePins],
-    );
-
-    // 지도 탭 → 좌표를 {lat,lng}로 호출부에 전달(지점 선택 모드에서만 연결됨).
-    // Map onPress의 nativeEvent.lngLat은 [lng, lat] 순서.
-    const handleMapPress = useCallback(
-      (e: NativeSyntheticEvent<{ lngLat: [number, number] }>) => {
-        const coords = e.nativeEvent?.lngLat;
-        if (Array.isArray(coords) && coords.length >= 2) {
-          onMapPress?.({ lng: coords[0]!, lat: coords[1]! });
-        }
-      },
-      [onMapPress],
     );
 
     // 확보한 현위치([lng, lat]). 최초 포커스 + 나침반 버튼에서 재사용. (웹의 userLocationRef 대응)
@@ -299,8 +281,6 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
           // 웹의 attributionControl:false와 동일 — 정보(ⓘ) 버튼·로고 숨김
           attribution={false}
           logo={false}
-          // 지점 선택 모드에서만 지도 탭 좌표를 전달(평소엔 미연결).
-          onPress={onMapPress ? handleMapPress : undefined}
           // 이동/줌 종료 시 그림자 재계산
           onRegionDidChange={() => void updateShadows()}
           // 최초 타일 렌더 완료 시 1회 계산(정지 상태에서도 그림자가 뜨도록)

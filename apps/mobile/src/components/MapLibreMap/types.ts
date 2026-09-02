@@ -42,6 +42,4 @@ export interface MapLibreMapProps {
   routeLines?: RouteLine[];
   /** 경로 시작·도착 지점 핀(경로 설정 중 표시). */
   routePins?: RoutePin[];
-  /** 지점 선택 모드에서 지도를 탭하면 좌표([lng,lat] 아닌 {lat,lng})를 알린다. */
-  onMapPress?: (coord: { lat: number; lng: number }) => void;
 }
