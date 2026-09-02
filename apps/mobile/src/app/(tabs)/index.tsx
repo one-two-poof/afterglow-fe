@@ -41,7 +41,7 @@ import { usePlaces } from "@/hooks/use-places";
 import { useRecommendations } from "@/hooks/use-recommendations";
 import { type PlaceCategory } from "@/lib/places";
 import { type Place } from "@/types/place";
-import { savedCourseToMarkers } from "@/types/recommendation";
+import { courseTitle, savedCourseToMarkers } from "@/types/recommendation";
 
 // 필터 해제(기본) 값. "전체" = 모든 마커 해제. 저장 코스 태그는 selectionId 문자열,
 // 카테고리 태그는 PlaceCategory 문자열을 값으로 쓴다.
@@ -439,8 +439,7 @@ export default function HomeScreen() {
               value={String(course.selectionId)}
               icon={<Text>📍</Text>}
             >
-              {course.daily_schedules[0]?.start_location.name ??
-                course.course_id}
+              {courseTitle(course)}
             </TagList.Item>
           ))}
         </TagList>

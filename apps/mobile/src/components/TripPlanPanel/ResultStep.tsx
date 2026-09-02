@@ -1,5 +1,6 @@
 import { Text, View } from "react-native";
 
+import { CourseItinerary } from "@/components/MyCourse/CourseItinerary";
 import { type RecommendedCourse } from "@/types/recommendation";
 
 export interface ResultStepProps {
@@ -10,7 +11,11 @@ export interface ResultStepProps {
   total: number;
 }
 
-/** 결과 단계: 추천 코스(완성 일정) 하나를 rank 순으로 보여준다. 웹 ResultStep의 RN 버전. */
+/**
+ * 결과 단계: 추천 코스(완성 일정) 하나를 rank 순으로 보여준다.
+ * 본문(요약·시술·타임라인)은 저장 코스 상세와 동일한 CourseItinerary를 공유하고,
+ * 여기서는 추천 순위 배지 + 진행(현재/전체)만 상단에 얹는다.
+ */
 export function ResultStep({ course, index, total }: ResultStepProps) {
   return (
     <View className="gap-4 pt-2">
@@ -25,32 +30,7 @@ export function ResultStep({ course, index, total }: ResultStepProps) {
         </Text>
       </View>
 
-      <Text className="text-body-sm text-text-secondary">
-        총 이동 거리 {course.total_distance_km}km
-      </Text>
-
-      {course.daily_schedules.map((day) => (
-        <View key={day.date} className="rounded-[12px] border border-border p-4">
-          <Text className="text-label-md text-text">{day.date}</Text>
-          <Text className="text-body-sm text-text-muted">
-            출발 · {day.start_location.name}
-          </Text>
-          <View className="mt-2 gap-1">
-            {day.places.map((place) => (
-              <Text
-                key={place.visit_order}
-                className="text-body-sm text-text"
-              >
-                {place.visit_order}. {place.place_name}
-                <Text className="text-text-muted">
-                  {" · "}
-                  {place.place_category}
-                </Text>
-              </Text>
-            ))}
-          </View>
-        </View>
-      ))}
+      <CourseItinerary course={course} />
     </View>
   );
 }
