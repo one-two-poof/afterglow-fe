@@ -2,6 +2,8 @@
 
 > 2026-08-20 결정: Expo 기반으로 App Store 출시를 목표로 한다.
 > 이 문서는 전환 작업의 전략, 순서, PR 단위를 정의한다. 각 PR이 머지될 때마다 진행 상황 체크박스를 갱신한다.
+>
+> **최종 갱신: 2026-09-02** — Phase 0~3(기반·공용 UI·앱 골격·기능 이식) 완료. 남은 작업은 Phase 3.5(다국어)와 Phase 4(출시 준비·정리). 리스크였던 PMTiles·OAuth 딥링크 해소.
 
 ## 원칙
 
@@ -68,34 +70,44 @@ packages/
 
 - [x] **PR 8. PlaceCard**
 - [x] **PR 9. Calendar**: date-utils는 순수 TS → `packages/utils`로 승격 후 공유. 캘린더 UI는 RN으로 새로 구현.
-- [ ] **PR 10~13. TripPlanPanel**: 웹의 바텀시트 패널 → RN 바텀시트. 스텝별로 PR 분할:
+- [x] **PR 10~13. TripPlanPanel**: 웹의 바텀시트 패널 → RN 바텀시트. 스텝별로 PR 분할:
   - [x] PR 10. 패널 골격 + use-trip-plan-form (스텝 상태 머신)
   - [x] PR 11. TreatmentStep + TreatmentDateStep + ScheduleStep
   - [x] PR 12. PurposeStep + PlaceStep + WalkPreferenceStep
   - [x] PR 13. ResultStep + use-recommend-courses 연동
 - [x] **PR 14. 지도 (1) 기본 렌더**: @maplibre/maplibre-react-native로 지도 + 건물 PMTiles 렌더. 여기서 PMTiles 지원 리스크 해소.
-- [ ] **PR 15. 지도 (2) 그림자**: shadows.ts를 `packages/utils`(또는 `packages/map-core`)로 승격, 네이티브 지도에 그림자 레이어 적용.
-- [ ] **PR 16. 지도 (3) 코스 렌더**: 추천 코스 클릭 → 지도에 좌표(mapX=lng, mapY=lat) 렌더.
-- [x] **PR 17. 내 코스 화면**: MyCourse, SavedCourseCard, 스켈레톤.
-- [ ] **PR 18. 인증**: Google OAuth를 딥링크 기반으로 재설계 (expo-auth-session 또는 백엔드 콜백→커스텀 스킴 리다이렉트). 토큰은 expo-secure-store. **백엔드 협의 필요** — 콜백 URL에 앱 스킴 허용.
-- [x] **PR 19. 내 정보 화면**: MyPage, ProfileHeader, SettingsList, LoginPrompt. use-me 훅 공유화.
+- [x] **PR 15. 지도 (2) 그림자**: shadows.ts를 `packages/utils`로 승격, 네이티브 지도에 그림자 레이어 적용. (#80 — 경로 안내 최단·그늘길 포함, #79)
+- [x] **PR 16. 지도 (3) 코스 렌더**: 홈 저장 코스 태그 → 지도에 좌표 마커 렌더. (#75)
+- [x] **PR 17. 내 코스 화면**: MyCourse, SavedCourseCard, 스켈레톤. (#69)
+  - [x] 코스 카드·상세(날짜별 타임라인) 개선 + 추천 결과(ResultStep)와 본문 공유 + 채택 저장(course-selection) 연동 및 목록/태그 최신화. (#82)
+- [x] **PR 18. 인증**: Google OAuth 딥링크 로그인(웹 리다이렉트 + 커스텀 스킴) + expo-secure-store 토큰. (#74, #76)
+- [x] **PR 19. 내 정보 화면**: MyPage, ProfileHeader, SettingsList, LoginPrompt. use-me 훅 공유화. (#70)
+  - [x] 설정 항목 화면 연결 — 고객센터(FAQ·1:1 문의), 이용약관·개인정보처리방침. (#83)
 
-### Phase 3.5 — 다국어(i18n) · **출시 전 포함**
+### Phase 4 — 출시 준비 & 내부 배포(TestFlight)
 
-앱 UI를 한국어/일본어/중국어(간체)로 렌더링 가능하게 한다. **첫 App Store 출시 전에 포함한다.** 상세 PR 분할은 별도 문서 참고: [`APP_I18N_ROADMAP.md`](./APP_I18N_ROADMAP.md).
+**다국어보다 내부 배포를 먼저 한다.** TestFlight 내부 테스트는 App Store 심사가 없어 언어 하나(한국어)만으로도 실기기 검증이 가능하다. 다국어는 정식 출시 전(Phase 4.5)으로 미룬다.
+
+- [ ] **PR 20. 앱 아이콘/스플래시/폰트(Pretendard)**: 아이콘·스플래시 완료, 폰트는 TestFlight 이후로 미룸.
+  - [x] 앱 아이콘 — iOS 템플릿(`expo.icon`) 참조 제거하고 afterglow 로고(`icon.png`)로 통일 + App Store용 알파 채널 제거.
+  - [x] 스플래시 — afterglow 로고 (#73).
+  - [ ] 폰트(Pretendard) — 전역 기본 폰트 교체 + weight 매핑 필요. TestFlight 내부 배포 이후 별도 진행(현재 앱은 `font-sans` 미사용 = 시스템 폰트).
+- [ ] **PR 21. EAS Build + TestFlight 내부 배포**: Apple Developer 가입($99/년) → App Store Connect 앱 등록(번들 ID) → `eas.json` + `eas build -p ios` → `eas submit` → TestFlight 내부 테스터. **선행: 서버 HTTPS 전환 완료(ATS 예외 불필요).**
+
+### Phase 4.5 — 다국어(i18n) · **정식 출시 전 포함**
+
+앱 UI를 한국어/일본어/중국어(간체)로 렌더링 가능하게 한다. **App Store 정식 출시 전에 포함한다(내부 배포 이후).** 상세 PR 분할은 별도 문서 참고: [`APP_I18N_ROADMAP.md`](./APP_I18N_ROADMAP.md).
 
 - [ ] **다국어 지원 (PR I-1 ~ I-10)**: i18n 인프라(i18next + react-i18next + expo-localization) → 화면별 문자열 교체 → 내 정보에 언어 선택 UI → ja/zh 번역·QA. 서버 데이터 번역은 비범위(추후). 세부 순서/체크박스는 `APP_I18N_ROADMAP.md`에서 관리.
 
-### Phase 4 — 출시 준비 & 정리
+### Phase 5 — 정식 출시 & 정리
 
-- [ ] **PR 20. 앱 아이콘/스플래시/폰트(Pretendard)**
-- [ ] **PR 21. EAS Build 설정** + 내부 배포(TestFlight)
 - [ ] **PR 22. 정리**: 웹/앱 중복 코드 정리 — 공유 가능한 로직의 packages 승격 마무리, `packages/ui`의 유지/폐기 결정, 이 문서에 결과 기록.
 
 ## 리스크 / 미결 사항
 
-- **PMTiles × MapLibre Native**: 웹은 pmtiles JS 라이브러리로 프로토콜을 등록하지만, 네이티브의 PMTiles 지원 방식은 다름. PR 14에서 최우선 검증. 안 되면 백엔드에 타일 서버(z/x/y) 요청 필요. (참고: buildings.pmtiles 서버가 현재 no-store 헤더로 캐싱 차단 중인 이슈도 미결)
-- **OAuth 딥링크**: 백엔드 콜백이 현재 웹 URL로 리다이렉트. 앱 스킴(`afterglow://`) 리다이렉트 지원을 백엔드와 협의해야 함 (PR 18 전에).
+- ~~**PMTiles × MapLibre Native**~~: ✅ 해소 — PR 14~16에서 건물·그림자·코스 렌더까지 네이티브 PMTiles로 검증 완료. (단 buildings.pmtiles 서버가 no-store 헤더로 캐싱을 차단하는 이슈는 별개로 미결 — 백엔드 헤더 vs SW 미정)
+- ~~**OAuth 딥링크**~~: ✅ 해소 — PR 18(#74, #76)에서 웹 리다이렉트 + 커스텀 스킴 딥링크 로그인 구현.
 - **NativeWind 버전 호환**: 웹은 Tailwind v4, NativeWind의 지원 버전과 다를 수 있음. mobile 앱은 독립 워크스페이스라 Tailwind 버전을 따로 가져가도 무방.
 - **suncalc/그림자 성능**: 네이티브 지도에서 대량 폴리곤 그림자 렌더 성능은 PR 15에서 실측.
 
