@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useCourseSelection } from "@/hooks/use-course-selection";
 import { useMe } from "@/hooks/use-me";
 
 import { useRecommendCourses } from "./hooks/use-recommend-courses";
@@ -48,6 +49,8 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
   const recommendMutation = useRecommendCourses();
   const recommendations = recommendMutation.data ?? [];
   const { reset: resetRecommend } = recommendMutation;
+
+  const courseSelection = useCourseSelection();
 
   const showToast = useToastStore((s) => s.show);
 
@@ -101,13 +104,16 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
     });
   };
 
-  // 결과 단계: 현재 코스 채택 → 저장(내 코스)은 PR 17에서 붙인다. 지금은 안내 후 종료.
+  // 결과 단계: 현재 코스 채택 → 서버에 저장(POST /api/course-selection).
+  // 저장 성공 시 훅이 ["recommendations"] 쿼리를 무효화해 지도 태그·내 코스 목록이 최신화된다.
   const handleAdopt = () => {
     if (!currentCourse) {
       return;
     }
-    // TODO(PR 17): use-course-selection(POST /api/course-selection) + adopted-courses-store 저장
-    showToast("코스를 저장했어요");
+    courseSelection.mutate(Number(currentCourse.course_id), {
+      onSuccess: () => showToast("코스를 저장했어요"),
+      onError: () => showToast("코스 저장에 실패했어요"),
+    });
     handleClose();
   };
 

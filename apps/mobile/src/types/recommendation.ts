@@ -75,6 +75,27 @@ export interface SavedCourse extends RecommendedCourse {
   selectedAt: string;
 }
 
+/**
+ * 코스 표시용 제목. 홈 지도의 저장 코스 태그 라벨과 **동일한 규칙**을 공유한다:
+ * 첫날 출발지(숙소 등) 이름을 제목으로 쓰고, 없으면 course_id로 폴백.
+ * 태그(index.tsx)와 카드/상세(MyCourse)가 같은 규칙을 쓰도록 이 헬퍼로 단일화한다.
+ */
+export function courseTitle(
+  course: Pick<RecommendedCourse, "daily_schedules" | "course_id">,
+): string {
+  return course.daily_schedules[0]?.start_location.name ?? course.course_id;
+}
+
+/** 코스 요약 통계 (일수 · 방문 장소 수 · 총 이동 거리). 카드/상세 요약에 쓴다. */
+export function courseSummary(course: RecommendedCourse) {
+  const days = course.daily_schedules.length;
+  const placeCount = course.daily_schedules.reduce(
+    (sum, day) => sum + day.places.length,
+    0,
+  );
+  return { days, placeCount, distanceKm: course.total_distance_km };
+}
+
 /** 지도 마커 (좌표 + 라벨 + 상세). 모바일 MapMarker와 호환된다. */
 export type CourseMarker = LatLng & { label: string; detail: MarkerDetail };
 
