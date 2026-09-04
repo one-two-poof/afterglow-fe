@@ -1,7 +1,10 @@
 import { Text, View } from "react-native";
 
 import { CourseItinerary } from "@/components/MyCourse/CourseItinerary";
-import { type RecommendedCourse } from "@/types/recommendation";
+import {
+  type CourseMarker,
+  type RecommendedCourse,
+} from "@/types/recommendation";
 
 export interface ResultStepProps {
   course: RecommendedCourse;
@@ -9,6 +12,8 @@ export interface ResultStepProps {
   index: number;
   /** 전체 추천 코스 수 */
   total: number;
+  /** 타임라인 장소 탭 시 지도 상세로 이동(패널 최소화). */
+  onPlacePress?: (marker: CourseMarker) => void;
 }
 
 /**
@@ -16,7 +21,12 @@ export interface ResultStepProps {
  * 본문(요약·시술·타임라인)은 저장 코스 상세와 동일한 CourseItinerary를 공유하고,
  * 여기서는 추천 순위 배지 + 진행(현재/전체)만 상단에 얹는다.
  */
-export function ResultStep({ course, index, total }: ResultStepProps) {
+export function ResultStep({
+  course,
+  index,
+  total,
+  onPlacePress,
+}: ResultStepProps) {
   return (
     <View className="gap-4 pt-2">
       <View className="flex-row items-center justify-between">
@@ -30,7 +40,7 @@ export function ResultStep({ course, index, total }: ResultStepProps) {
         </Text>
       </View>
 
-      <CourseItinerary course={course} />
+      <CourseItinerary course={course} onPlacePress={onPlacePress} />
     </View>
   );
 }
