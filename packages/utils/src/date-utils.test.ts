@@ -1,6 +1,7 @@
 import {
   diffInDays,
   getMonthMatrix,
+  isBeforeDay,
   isInRange,
   nextRange,
   type DateRange,
@@ -64,6 +65,14 @@ describe("nextRange (시작일 포함 최대 4일 규칙)", () => {
 });
 
 describe("isInRange / diffInDays", () => {
+  it("같은 날은 과거로 보지 않고 이전 날짜만 과거로 판단한다", () => {
+    const today = new Date(2026, 8, 5, 15, 30);
+
+    expect(isBeforeDay(new Date(2026, 8, 4, 23, 59), today)).toBe(true);
+    expect(isBeforeDay(new Date(2026, 8, 5, 0, 0), today)).toBe(false);
+    expect(isBeforeDay(new Date(2026, 8, 6, 0, 0), today)).toBe(false);
+  });
+
   it("양 끝은 제외, 사이 날짜만 true", () => {
     const range: DateRange = { start: d(15), end: d(19) };
     expect(isInRange(d(15), range)).toBe(false);
