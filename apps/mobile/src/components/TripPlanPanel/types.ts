@@ -5,6 +5,8 @@ export interface DailyStart {
   date: string;
   /** 병원·숙소 데이터 아이디 (출발점) */
   start_id: number;
+  /** 출발점 장소 유형 (Place.placeType, 예: "HOSPITAL") */
+  place_type: string;
 }
 
 export interface TreatmentSelection {
