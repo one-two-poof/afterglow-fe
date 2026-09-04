@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { useI18n } from "@/i18n/i18n-provider";
 
 import { TERMS_DOCS, type TermsDoc } from "./terms-content";
 
@@ -53,17 +54,22 @@ function Segmented({
  * 조항별 섹션과 시행일을 보여준다. 설정 목록의 "이용약관 및 개인정보처리방침"에서 진입.
  */
 export function Terms() {
+  const { t } = useI18n();
   const [activeKey, setActiveKey] = useState<TermsDoc["key"]>("terms");
   const doc = TERMS_DOCS.find((d) => d.key === activeKey) ?? TERMS_DOCS[0]!;
 
   return (
     <View className="flex-1 bg-bg">
-      <ScreenHeader title="약관 및 정책" />
+      <ScreenHeader title={t("terms.title")} />
       <ScrollView contentContainerClassName="gap-5 px-5 py-5 pb-12">
-        <Segmented docs={TERMS_DOCS} activeKey={activeKey} onChange={setActiveKey} />
+        <Segmented
+          docs={TERMS_DOCS}
+          activeKey={activeKey}
+          onChange={setActiveKey}
+        />
 
         <Text className="text-caption text-text-muted">
-          시행일 {doc.effectiveDate}
+          {t("terms.effectiveDate", { date: doc.effectiveDate })}
         </Text>
 
         <View className="gap-5">
@@ -80,8 +86,7 @@ export function Terms() {
         <View className="mt-2 flex-row items-start gap-2 rounded-[12px] bg-surface-muted px-4 py-3">
           <Info size={16} color={colors["text-muted"]} />
           <Text className="flex-1 text-caption text-text-muted">
-            본 문서는 서비스 이해를 돕기 위한 요약 문안입니다. 최신 전문은 서비스
-            공지 또는 고객센터를 통해 확인할 수 있습니다.
+            {t("terms.notice")}
           </Text>
         </View>
       </ScrollView>

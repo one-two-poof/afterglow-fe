@@ -9,6 +9,8 @@ import {
 } from "lucide-react-native";
 import { Pressable, Text, View } from "react-native";
 
+import { useI18n } from "@/i18n/i18n-provider";
+
 import {
   type CourseMarker,
   courseStartToMarker,
@@ -19,14 +21,15 @@ import {
   type RecommendedPlace,
 } from "@/types/recommendation";
 
-const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
-
 /** "YYYY-MM-DD" → "M월 D일 (요일)" (정오 기준으로 만들어 타임존 영향 제거) */
-const formatDayLong = (iso: string) => {
+const formatDayLong = (iso: string, locale: string) => {
   const [y, m, d] = iso.split("-").map(Number);
   if (!y || !m || !d) return iso;
-  const weekday = WEEKDAYS[new Date(y, m - 1, d, 12).getDay()];
-  return `${m}월 ${d}일 (${weekday})`;
+  return new Intl.DateTimeFormat(locale, {
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+  }).format(new Date(y, m - 1, d, 12));
 };
 
 /** 요약 통계 카드 한 칸 (아이콘 + 값 + 라벨). */
@@ -123,10 +126,13 @@ function PlaceNode({
   isLast: boolean;
   onPress?: () => void;
 }) {
+  const { t } = useI18n();
   const meta = [
     place.place_category,
-    place.is_indoor === 1 ? "실내" : "실외",
-    place.walk_hard ? `도보 ${place.walk_hard}/5` : "",
+    place.is_indoor === 1 ? t("course.indoor") : t("course.outdoor"),
+    place.walk_hard
+      ? t("course.walkDifficulty", { level: place.walk_hard })
+      : "",
   ].filter(Boolean);
 
   return (
@@ -136,10 +142,15 @@ function PlaceNode({
         <Text className="text-label-sm text-primary">{place.visit_order}</Text>
       }
     >
-      <NodeBody onPress={onPress} label={`${place.place_name} 지도에서 보기`}>
+      <NodeBody
+        onPress={onPress}
+        label={t("course.viewOnMap", { name: place.place_name })}
+      >
         {place.dist_to_prev_km > 0 ? (
           <Text className="text-caption text-text-muted">
-            이전 지점서 {place.dist_to_prev_km}km 이동
+            {t("course.distanceFromPrevious", {
+              distance: place.dist_to_prev_km,
+            })}
           </Text>
         ) : null}
         <View className="flex-row items-center gap-1">
@@ -173,13 +184,16 @@ function DaySection({
   /** 노드(출발지·방문 장소) 탭 시 해당 지점 마커로 호출. 없으면 비대화형. */
   onPlacePress?: (marker: CourseMarker) => void;
 }) {
+  const { locale, t } = useI18n();
   const dayTreatments = treatments.filter((t) => t.date === day.date);
 
   return (
     <View className="rounded-[16px] border border-border bg-surface p-4">
       <View className="mb-3 flex-row items-baseline gap-2">
         <Text className="text-overline text-primary">DAY {index + 1}</Text>
-        <Text className="text-label-md text-text">{formatDayLong(day.date)}</Text>
+        <Text className="text-label-md text-text">
+          {formatDayLong(day.date, locale)}
+        </Text>
       </View>
 
       {dayTreatments.length > 0 ? (
@@ -190,7 +204,9 @@ function DaySection({
               {t.name}
             </Text>
           ))}
-          <Text className="text-caption text-text-secondary">시술 예정</Text>
+          <Text className="text-caption text-text-secondary">
+            {t("course.treatmentScheduled")}
+          </Text>
         </View>
       ) : null}
 
@@ -205,9 +221,11 @@ function DaySection({
               ? () => onPlacePress(courseStartToMarker(day.start_location))
               : undefined
           }
-          label={`${day.start_location.name} 지도에서 보기`}
+          label={t("course.viewOnMap", { name: day.start_location.name })}
         >
-          <Text className="text-caption text-primary">출발</Text>
+          <Text className="text-caption text-primary">
+            {t("course.departure")}
+          </Text>
           <View className="flex-row items-center gap-1">
             <Text className="text-label-lg text-text">
               {day.start_location.name}
@@ -248,6 +266,7 @@ export function CourseItinerary({
   /** 타임라인 노드 탭 시 해당 지점 마커로 호출(추천 패널 전용). 없으면 비대화형. */
   onPlacePress?: (marker: CourseMarker) => void;
 }) {
+  const { t } = useI18n();
   const { days, placeCount, distanceKm } = courseSummary(course);
 
   return (
@@ -268,18 +287,18 @@ export function CourseItinerary({
       <View className="flex-row gap-2">
         <StatCard
           icon={<CalendarDays size={18} color={colors.primary} />}
-          value={`${days}일`}
-          label="일정"
+          value={t("course.days", { count: days })}
+          label={t("course.schedule")}
         />
         <StatCard
           icon={<MapPin size={18} color={colors.primary} />}
-          value={`${placeCount}곳`}
-          label="방문지"
+          value={t("course.places", { count: placeCount })}
+          label={t("course.destinations")}
         />
         <StatCard
           icon={<Route size={18} color={colors.primary} />}
           value={`${distanceKm}km`}
-          label="총 이동"
+          label={t("course.totalDistance")}
         />
       </View>
 

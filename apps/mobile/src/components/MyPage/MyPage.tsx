@@ -9,6 +9,7 @@ import { useAccessToken } from "@/hooks/use-access-token";
 import { useMe } from "@/hooks/use-me";
 import { clearAccessToken, UnauthorizedError } from "@/lib/auth";
 import { deleteMe } from "@/lib/me";
+import { useI18n } from "@/i18n/i18n-provider";
 
 import { LoginPrompt } from "./LoginPrompt";
 import { MyPageSkeleton } from "./MyPageSkeleton";
@@ -23,6 +24,7 @@ import { SettingsList } from "./SettingsList";
  * TODO(PR 18): 토큰 스텁(항상 null)이라 현재는 로그인 안내가 뜬다.
  */
 export function MyPage() {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const showToast = useToastStore((state) => state.show);
   const token = useAccessToken();
@@ -45,33 +47,29 @@ export function MyPage() {
     mutationFn: deleteMe,
     onSuccess: () => {
       clearAccessToken();
-      showToast("계정이 삭제됐어요.");
+      showToast(t("account.deleted"));
     },
     onError: (mutationError) => {
       if (mutationError instanceof UnauthorizedError) {
         clearAccessToken();
-        showToast("로그인이 만료됐어요. 다시 로그인해주세요.");
+        showToast(t("account.sessionExpired"));
         return;
       }
-      showToast("회원 탈퇴에 실패했어요. 잠시 후 다시 시도해주세요.");
+      showToast(t("account.deleteFailed"));
     },
   });
 
   const handleDeleteAccount = () => {
     if (deleteAccountMutation.isPending) return;
 
-    Alert.alert(
-      "회원 탈퇴",
-      "계정과 저장한 코스 등 관련 데이터가 영구 삭제되며 복구할 수 없어요. 정말 탈퇴할까요?",
-      [
-        { text: "취소", style: "cancel" },
-        {
-          text: "탈퇴",
-          style: "destructive",
-          onPress: () => deleteAccountMutation.mutate(),
-        },
-      ],
-    );
+    Alert.alert(t("account.deleteTitle"), t("account.deleteMessage"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("account.deleteConfirm"),
+        style: "destructive",
+        onPress: () => deleteAccountMutation.mutate(),
+      },
+    ]);
   };
 
   if (token === undefined) {
@@ -103,14 +101,14 @@ export function MyPage() {
         <View className="flex-1 items-center justify-center gap-4 px-6">
           <View className="items-center gap-2">
             <Text className="text-heading-sm text-text">
-              내 정보를 불러오지 못했어요
+              {t("profile.loadFailed")}
             </Text>
             <Text className="text-body-sm text-text-secondary">
-              잠시 후 다시 시도해 주세요.
+              {t("common.tryAgainLater")}
             </Text>
           </View>
           <Button variant="secondary" size="md" onPress={() => refetch()}>
-            다시 시도
+            {t("common.retry")}
           </Button>
         </View>
       </SafeAreaView>

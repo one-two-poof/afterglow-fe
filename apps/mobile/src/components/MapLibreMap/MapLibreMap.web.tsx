@@ -1,6 +1,8 @@
 import { forwardRef, useImperativeHandle } from "react";
 import { Text, View } from "react-native";
 
+import { useI18n } from "@/i18n/i18n-provider";
+
 import { type MapLibreMapProps, type MapLibreMapRef } from "./types";
 
 /**
@@ -9,11 +11,12 @@ import { type MapLibreMapProps, type MapLibreMapRef } from "./types";
  */
 export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
   function MapLibreMap(_props, ref) {
+    const { t } = useI18n();
     useImperativeHandle(ref, () => ({ getCenter: async () => null }), []);
     return (
       <View className="flex-1 items-center justify-center bg-surface-muted">
         <Text className="text-body-sm text-text-muted">
-          지도는 앱(iOS/Android)에서 표시됩니다
+          {t("map.nativeOnly")}
         </Text>
       </View>
     );

@@ -1,6 +1,7 @@
 import { Text, View } from "react-native";
 
 import { CourseItinerary } from "@/components/MyCourse/CourseItinerary";
+import { useI18n } from "@/i18n/i18n-provider";
 import {
   type CourseMarker,
   type RecommendedCourse,
@@ -27,12 +28,13 @@ export function ResultStep({
   total,
   onPlacePress,
 }: ResultStepProps) {
+  const { t } = useI18n();
   return (
     <View className="gap-4 pt-2">
       <View className="flex-row items-center justify-between">
         <View className="rounded-full bg-surface-accent px-3 py-1">
           <Text className="text-label-sm text-primary">
-            추천 {course.rank}순위
+            {t("plan.result.rank", { rank: course.rank })}
           </Text>
         </View>
         <Text className="text-body-sm text-text-muted">

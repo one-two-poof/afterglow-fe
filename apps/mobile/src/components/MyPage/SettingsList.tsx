@@ -4,6 +4,8 @@ import { type Href, useRouter } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
 import { Pressable, Text, View } from "react-native";
 
+import { useI18n } from "@/i18n/i18n-provider";
+
 interface SettingsItem {
   key: string;
   title: string;
@@ -15,34 +17,15 @@ interface SettingsItem {
   disabled?: boolean;
 }
 
-// 라우트가 아직 없는 항목(언어 설정)은 href/onPress 미지정 placeholder — 연결되면 채운다.
-const MENU_GROUPS: SettingsItem[][] = [
-  [
-    {
-      key: "language",
-      title: "언어 설정 (Language)",
-      description: "한국어 / English / 中文",
-    },
-    {
-      key: "support",
-      title: "고객센터",
-      description: "자주 묻는 질문 및 1:1 문의",
-      href: "/support",
-    },
-    {
-      key: "terms",
-      title: "이용약관 및 개인정보처리방침",
-      description: "서비스 운영 규정 확인",
-      href: "/terms",
-    },
-  ],
-];
-
-function SettingsRow({ item, isLast }: { item: SettingsItem; isLast: boolean }) {
+function SettingsRow({
+  item,
+  isLast,
+}: {
+  item: SettingsItem;
+  isLast: boolean;
+}) {
   const router = useRouter();
-  const handlePress = item.href
-    ? () => router.push(item.href!)
-    : item.onPress;
+  const handlePress = item.href ? () => router.push(item.href!) : item.onPress;
   return (
     <Pressable
       accessibilityRole="button"
@@ -100,26 +83,50 @@ export function SettingsList({
   onDeleteAccount: () => void;
   isDeletingAccount: boolean;
 }) {
+  const { t } = useI18n();
+  const menuGroups: SettingsItem[][] = [
+    [
+      {
+        key: "language",
+        title: t("language.title"),
+        description: t("language.description"),
+        href: "/language",
+      },
+      {
+        key: "support",
+        title: t("settings.support"),
+        description: t("settings.supportDescription"),
+        href: "/support",
+      },
+      {
+        key: "terms",
+        title: t("settings.terms"),
+        description: t("settings.termsDescription"),
+        href: "/terms",
+      },
+    ],
+  ];
+
   return (
     <View className="gap-2 bg-bg pb-8">
-      {MENU_GROUPS.map((group, i) => (
+      {menuGroups.map((group, i) => (
         <Group key={i} items={group} />
       ))}
       <Group
         items={[
           {
             key: "logout",
-            title: "로그아웃",
-            description: "안전하게 계정 연결 해제",
+            title: t("settings.logout"),
+            description: t("settings.logoutDescription"),
             onPress: onLogout,
             destructive: true,
           },
           {
             key: "delete-account",
-            title: "회원 탈퇴",
+            title: t("settings.deleteAccount"),
             description: isDeletingAccount
-              ? "계정을 삭제하고 있어요"
-              : "계정과 저장된 데이터를 영구 삭제",
+              ? t("settings.deletingAccount")
+              : t("settings.deleteAccountDescription"),
             onPress: onDeleteAccount,
             destructive: true,
             disabled: isDeletingAccount,

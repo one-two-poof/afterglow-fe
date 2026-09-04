@@ -1,12 +1,9 @@
 import { colors } from "@afterglow/tokens";
 import { useRouter } from "expo-router";
-import {
-  CalendarDays,
-  ChevronRight,
-  MapPin,
-  Route,
-} from "lucide-react-native";
+import { CalendarDays, ChevronRight, MapPin, Route } from "lucide-react-native";
 import { Pressable, Text, View } from "react-native";
+
+import { useI18n } from "@/i18n/i18n-provider";
 
 import {
   courseSummary,
@@ -16,31 +13,31 @@ import {
 } from "@/types/recommendation";
 
 /** "YYYY-MM-DD..." → "M월 D일" (앞 10자리만 파싱, 타임존 무관) */
-const formatMonthDay = (iso: string) => {
-  const [, month, day] = iso.slice(0, 10).split("-");
-  if (!month || !day) return "";
-  return `${Number(month)}월 ${Number(day)}일`;
+const formatMonthDay = (iso: string, locale: string) => {
+  const [year, month, day] = iso.slice(0, 10).split("-").map(Number);
+  if (!year || !month || !day) return "";
+  return new Intl.DateTimeFormat(locale, {
+    month: "long",
+    day: "numeric",
+  }).format(new Date(year, month - 1, day, 12));
 };
 
 /** 코스 일정의 시작~종료 날짜 표시. 하루짜리면 단일 날짜만. */
-const formatCourseRange = (schedules: DailySchedule[]) => {
+const formatCourseRange = (schedules: DailySchedule[], locale: string) => {
   const start = schedules[0]?.date;
   if (!start) return "";
-  const startLabel = formatMonthDay(start);
-  const endLabel = formatMonthDay(schedules[schedules.length - 1]!.date);
+  const startLabel = formatMonthDay(start, locale);
+  const endLabel = formatMonthDay(
+    schedules[schedules.length - 1]!.date,
+    locale,
+  );
   return !endLabel || startLabel === endLabel
     ? startLabel
     : `${startLabel} ~ ${endLabel}`;
 };
 
 /** 요약 통계 한 칸 (아이콘 + 값). 카드 하단 메타 행에 3개 나열. */
-function Stat({
-  icon,
-  value,
-}: {
-  icon: React.ReactNode;
-  value: string;
-}) {
+function Stat({ icon, value }: { icon: React.ReactNode; value: string }) {
   return (
     <View className="flex-row items-center gap-1.5">
       {icon}
@@ -56,15 +53,16 @@ function Stat({
  * 시술 태그, 그리고 일수·장소 수·총 거리 요약 메타 행.
  */
 export function SavedCourseCard({ course }: { course: SavedCourse }) {
+  const { locale, t } = useI18n();
   const router = useRouter();
   const title = courseTitle(course);
   const { days, placeCount, distanceKm } = courseSummary(course);
-  const dateRange = formatCourseRange(course.daily_schedules);
+  const dateRange = formatCourseRange(course.daily_schedules, locale);
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${title} 코스 상세 보기`}
+      accessibilityLabel={t("course.viewDetails", { title })}
       onPress={() => router.push(`/course/${course.selectionId}`)}
       className="rounded-[16px] border border-border bg-surface p-4 active:opacity-90"
     >
@@ -99,11 +97,11 @@ export function SavedCourseCard({ course }: { course: SavedCourse }) {
       <View className="mt-3 flex-row items-center gap-4 border-t border-border pt-3">
         <Stat
           icon={<CalendarDays size={15} color={colors["text-muted"]} />}
-          value={`${days}일`}
+          value={t("course.days", { count: days })}
         />
         <Stat
           icon={<MapPin size={15} color={colors["text-muted"]} />}
-          value={`${placeCount}곳`}
+          value={t("course.places", { count: placeCount })}
         />
         <Stat
           icon={<Route size={15} color={colors["text-muted"]} />}

@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AppState, Platform, type AppStateStatus } from "react-native";
 
 import { useAccessToken } from "@/hooks/use-access-token";
+import { I18nProvider } from "@/i18n/i18n-provider";
 import { hydrateAccessToken } from "@/lib/auth";
 import { createQueryClient } from "@/lib/query-client";
 
@@ -83,9 +84,11 @@ export function AppProviders({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthQuerySync />
-      {children}
-    </QueryClientProvider>
+    <I18nProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthQuerySync />
+        {children}
+      </QueryClientProvider>
+    </I18nProvider>
   );
 }

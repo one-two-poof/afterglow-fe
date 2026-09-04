@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
 import { startGoogleLogin } from "@/lib/auth";
+import { useI18n } from "@/i18n/i18n-provider";
 
 /** Google 브랜드 아이콘 (웹 인라인 SVG의 react-native-svg 포팅) */
 function GoogleIcon() {
@@ -37,6 +38,7 @@ function GoogleIcon() {
  * lib/auth의 토큰 저장 → emit으로 MyPage가 자동 리렌더되어 내 정보 화면으로 전환된다.
  */
 export function LoginPrompt() {
+  const { t } = useI18n();
   const showToast = useToastStore((s) => s.show);
   const router = useRouter();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -51,7 +53,7 @@ export function LoginPrompt() {
         router.replace("/");
       }
     } catch {
-      showToast("로그인에 실패했어요. 잠시 후 다시 시도해주세요.");
+      showToast(t("login.failed"));
     } finally {
       setIsLoggingIn(false);
     }
@@ -62,9 +64,11 @@ export function LoginPrompt() {
       <View className="items-center gap-4">
         <Logo />
         <View className="items-center">
-          <Text className="text-heading-sm text-text">로그인이 필요해요</Text>
+          <Text className="text-heading-sm text-text">
+            {t("login.required")}
+          </Text>
           <Text className="mt-2 text-center text-body-sm text-text-secondary">
-            Google 계정으로 간편하게 로그인하고{"\n"}내 정보를 확인하세요.
+            {t("login.description")}
           </Text>
         </View>
       </View>
@@ -84,7 +88,7 @@ export function LoginPrompt() {
           <>
             <GoogleIcon />
             <Text className="text-label-lg text-on-action-secondary">
-              Google로 계속하기
+              {t("login.google")}
             </Text>
           </>
         )}

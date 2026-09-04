@@ -4,6 +4,9 @@ import { Check } from "lucide-react-native";
 import { Pressable, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
+import { useI18n } from "@/i18n/i18n-provider";
+import type { TranslationKey } from "@/i18n/config";
+
 type PurposeIconName = "beauty-shopping" | "culture-tour" | "rest";
 
 const PURPOSE_ICON_COLOR = "#0787d0";
@@ -44,26 +47,30 @@ function PurposeIcon({ name }: { name: PurposeIconName }) {
 export interface PurposeOption {
   /** 제출 값(한글) 겸 표시 라벨 */
   value: string;
+  labelKey: TranslationKey;
   icon: PurposeIconName;
-  description: string;
+  descriptionKey: TranslationKey;
 }
 
 /** 여행 주요 목적 선택지. value가 곧 제출 값(user_purpose) */
 export const PURPOSES: PurposeOption[] = [
   {
     value: "문화관광",
+    labelKey: "plan.purpose.culture",
     icon: "culture-tour",
-    description: "한국의 트렌디한 쇼핑몰과 도심 랜드마크 탐방",
+    descriptionKey: "plan.purpose.cultureDesc",
   },
   {
     value: "뷰티쇼핑",
+    labelKey: "plan.purpose.beauty",
     icon: "beauty-shopping",
-    description: "핫플레이스 맛집투어와 감성 카페 거리",
+    descriptionKey: "plan.purpose.beautyDesc",
   },
   {
     value: "휴식",
+    labelKey: "plan.purpose.rest",
     icon: "rest",
-    description: "도심 속 정원, 한강 공원, 고궁 산책을 통한 안정",
+    descriptionKey: "plan.purpose.restDesc",
   },
 ];
 
@@ -74,10 +81,11 @@ export interface PurposeStepProps {
 
 /** 여행 주요 목적 선택 (단일 선택). value 문자열을 그대로 제출 */
 export function PurposeStep({ value, onChange }: PurposeStepProps) {
+  const { t } = useI18n();
   return (
     <View className="gap-3 pt-2">
       <Text className="text-body-sm text-text-secondary">
-        시술 외에 어떤 활동을 주로 원하시나요?
+        {t("plan.purpose.prompt")}
       </Text>
 
       {PURPOSES.map((option) => {
@@ -98,9 +106,11 @@ export function PurposeStep({ value, onChange }: PurposeStepProps) {
             </View>
 
             <View className="flex-1">
-              <Text className="text-label-lg text-text">{option.value}</Text>
+              <Text className="text-label-lg text-text">
+                {t(option.labelKey)}
+              </Text>
               <Text className="text-body-sm text-text-muted">
-                {option.description}
+                {t(option.descriptionKey)}
               </Text>
             </View>
 

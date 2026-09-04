@@ -20,6 +20,7 @@ import {
 
 import { useCourseSelection } from "@/hooks/use-course-selection";
 import { useMe } from "@/hooks/use-me";
+import { useI18n } from "@/i18n/i18n-provider";
 import { type CourseMarker } from "@/types/recommendation";
 
 import { useRecommendCourses } from "./hooks/use-recommend-courses";
@@ -48,6 +49,7 @@ export const TripPlanPanel = ({
   onClose,
   onViewPlace,
 }: TripPlanPanelProps) => {
+  const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const { steps, reset: resetForm, buildPayload } = useTripPlanForm();
   const [step, setStep] = useState(0);
@@ -130,8 +132,8 @@ export const TripPlanPanel = ({
       return;
     }
     courseSelection.mutate(Number(currentCourse.course_id), {
-      onSuccess: () => showToast("코스를 저장했어요"),
-      onError: () => showToast("코스 저장에 실패했어요"),
+      onSuccess: () => showToast(t("plan.saved")),
+      onError: () => showToast(t("plan.saveFailed")),
     });
     resetPanel();
     onClose();
@@ -160,9 +162,12 @@ export const TripPlanPanel = ({
       <View style={{ flex: 1 }} className="justify-end">
         {/* 배경(시트 위 영역) 탭 → 닫기 */}
         <Pressable
-          accessibilityLabel="닫기"
+          accessibilityLabel={t("plan.close")}
           onPress={handleClose}
-          style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.4)" }]}
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: "rgba(0,0,0,0.4)" },
+          ]}
         />
 
         {/* 시트는 모달 뷰포트를 채우고 내부 ScrollView만 스크롤한다. */}
@@ -172,147 +177,149 @@ export const TripPlanPanel = ({
           style={{ paddingTop: insets.top }}
         >
           <SafeAreaView edges={["bottom"]} className="flex-1">
-              <View className="flex-row items-center gap-2 px-4 py-3">
-                {/* 추천 코스(결과) 화면에서는 뒤로가기 화살표를 숨긴다. */}
-                {phase === "result" ? null : (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={isFirst ? "홈으로 닫기" : "이전 단계"}
-                    onPress={handleBack}
-                    className="-ml-1 rounded-full p-1 active:bg-surface-muted"
-                  >
-                    <ArrowLeft size={22} />
-                  </Pressable>
-                )}
-                <Text className="text-heading-sm text-text">
-                  {phase === "result" ? "추천 코스" : current.title}
-                </Text>
-                {/* 로그인 사용자 프로필 이미지. 이미지가 없으면 표시하지 않는다. */}
-                {me?.profileImageUrl ? (
-                  <Image
-                    source={{ uri: me.profileImageUrl }}
-                    accessibilityIgnoresInvertColors
-                    className="ml-auto size-8 rounded-full border border-border"
+            <View className="flex-row items-center gap-2 px-4 py-3">
+              {/* 추천 코스(결과) 화면에서는 뒤로가기 화살표를 숨긴다. */}
+              {phase === "result" ? null : (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    isFirst ? t("plan.closeHome") : t("plan.previousStep")
+                  }
+                  onPress={handleBack}
+                  className="-ml-1 rounded-full p-1 active:bg-surface-muted"
+                >
+                  <ArrowLeft size={22} />
+                </Pressable>
+              )}
+              <Text className="text-heading-sm text-text">
+                {phase === "result" ? t("plan.result.title") : current.title}
+              </Text>
+              {/* 로그인 사용자 프로필 이미지. 이미지가 없으면 표시하지 않는다. */}
+              {me?.profileImageUrl ? (
+                <Image
+                  source={{ uri: me.profileImageUrl }}
+                  accessibilityIgnoresInvertColors
+                  className="ml-auto size-8 rounded-full border border-border"
+                />
+              ) : null}
+            </View>
+
+            <ScrollView
+              className="flex-1 px-4"
+              contentContainerClassName="pb-4"
+              keyboardShouldPersistTaps="handled"
+            >
+              {phase === "result" ? (
+                currentCourse ? (
+                  <ResultStep
+                    course={currentCourse}
+                    index={rankIndex}
+                    total={recommendations.length}
+                    onPlacePress={onViewPlace}
                   />
-                ) : null}
-              </View>
-
-              <ScrollView
-                className="flex-1 px-4"
-                contentContainerClassName="pb-4"
-                keyboardShouldPersistTaps="handled"
-              >
-                {phase === "result" ? (
-                  currentCourse ? (
-                    <ResultStep
-                      course={currentCourse}
-                      index={rankIndex}
-                      total={recommendations.length}
-                      onPlacePress={onViewPlace}
-                    />
-                  ) : (
-                    <View className="items-center justify-center gap-2 py-16">
-                      <Text className="text-body-md text-text">
-                        추천 코스를 모두 확인했어요
-                      </Text>
-                      <Text className="text-center text-body-sm text-text-muted">
-                        마음에 드는 코스가 없으면 조건을 바꿔 다시 시도해보세요.
-                      </Text>
-                    </View>
-                  )
                 ) : (
-                  current.content
-                )}
-              </ScrollView>
+                  <View className="items-center justify-center gap-2 py-16">
+                    <Text className="text-body-md text-text">
+                      {t("plan.result.complete")}
+                    </Text>
+                    <Text className="text-center text-body-sm text-text-muted">
+                      {t("plan.result.completeHint")}
+                    </Text>
+                  </View>
+                )
+              ) : (
+                current.content
+              )}
+            </ScrollView>
 
-              <View className="border-t border-border px-4 py-3">
-                {phase === "result" ? (
-                  currentCourse ? (
-                    <View className="gap-2">
-                      {/* 이전/건너뛰기로 rank를 앞뒤로 브라우징. 이전은 첫 코스에서
+            <View className="border-t border-border px-4 py-3">
+              {phase === "result" ? (
+                currentCourse ? (
+                  <View className="gap-2">
+                    {/* 이전/건너뛰기로 rank를 앞뒤로 브라우징. 이전은 첫 코스에서
                           비활성. 채택은 아래 전체폭 primary로 강조. */}
-                      <View className="flex-row gap-2">
-                        <Button
-                          variant="secondary"
-                          size="lg"
-                          className="flex-1"
-                          disabled={rankIndex === 0}
-                          onPress={handlePrev}
-                        >
-                          이전
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="lg"
-                          className="flex-1"
-                          onPress={handleSkip}
-                        >
-                          건너뛰기
-                        </Button>
-                      </View>
+                    <View className="flex-row gap-2">
                       <Button
-                        variant="primary"
+                        variant="secondary"
                         size="lg"
-                        className="w-full"
-                        onPress={handleAdopt}
+                        className="flex-1"
+                        disabled={rankIndex === 0}
+                        onPress={handlePrev}
                       >
-                        이 코스 채택
+                        {t("plan.previous")}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="lg"
+                        className="flex-1"
+                        onPress={handleSkip}
+                      >
+                        {t("plan.skip")}
                       </Button>
                     </View>
-                  ) : (
-                    // 모두 건너뛴 상태: 이전으로 되돌아가거나 닫는다.
-                    // 각 버튼을 flex-1 컨테이너로 감싸 영역을 정확히 반반으로 맞춘다
-                    // (Button 기본 너비 w-[320px] 영향 제거).
-                    <View className="flex-row gap-2">
-                      {rankIndex > 0 ? (
-                        <View className="flex-1">
-                          <Button
-                            variant="secondary"
-                            size="lg"
-                            className="w-full"
-                            onPress={handlePrev}
-                          >
-                            이전
-                          </Button>
-                        </View>
-                      ) : null}
-                      <View className="flex-1">
-                        <Button
-                          variant="primary"
-                          size="lg"
-                          className="w-full"
-                          onPress={handleFinish}
-                        >
-                          닫기
-                        </Button>
-                      </View>
-                    </View>
-                  )
-                ) : (
-                  <>
-                    {recommendMutation.isError && (
-                      <Text className="mb-2 text-center text-body-sm text-error">
-                        {recommendMutation.error instanceof Error
-                          ? recommendMutation.error.message
-                          : "코스 추천에 실패했어요. 잠시 후 다시 시도해주세요."}
-                      </Text>
-                    )}
                     <Button
                       variant="primary"
                       size="lg"
                       className="w-full"
-                      disabled={!current.canNext || recommendMutation.isPending}
-                      onPress={handleNext}
+                      onPress={handleAdopt}
                     >
-                      {isLast
-                        ? recommendMutation.isPending
-                          ? "코스 추천 받는 중…"
-                          : "코스 추천 받기"
-                        : "다음 단계로"}
+                      {t("plan.adopt")}
                     </Button>
-                  </>
-                )}
-              </View>
+                  </View>
+                ) : (
+                  // 모두 건너뛴 상태: 이전으로 되돌아가거나 닫는다.
+                  // 각 버튼을 flex-1 컨테이너로 감싸 영역을 정확히 반반으로 맞춘다
+                  // (Button 기본 너비 w-[320px] 영향 제거).
+                  <View className="flex-row gap-2">
+                    {rankIndex > 0 ? (
+                      <View className="flex-1">
+                        <Button
+                          variant="secondary"
+                          size="lg"
+                          className="w-full"
+                          onPress={handlePrev}
+                        >
+                          {t("plan.previous")}
+                        </Button>
+                      </View>
+                    ) : null}
+                    <View className="flex-1">
+                      <Button
+                        variant="primary"
+                        size="lg"
+                        className="w-full"
+                        onPress={handleFinish}
+                      >
+                        {t("plan.close")}
+                      </Button>
+                    </View>
+                  </View>
+                )
+              ) : (
+                <>
+                  {recommendMutation.isError && (
+                    <Text className="mb-2 text-center text-body-sm text-error">
+                      {recommendMutation.error instanceof Error
+                        ? recommendMutation.error.message
+                        : t("plan.recommendFailed")}
+                    </Text>
+                  )}
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    className="w-full"
+                    disabled={!current.canNext || recommendMutation.isPending}
+                    onPress={handleNext}
+                  >
+                    {isLast
+                      ? recommendMutation.isPending
+                        ? t("plan.recommending")
+                        : t("plan.recommend")
+                      : t("plan.next")}
+                  </Button>
+                </>
+              )}
+            </View>
           </SafeAreaView>
         </KeyboardAvoidingView>
       </View>

@@ -7,6 +7,7 @@ import { Pressable, Text, View } from "react-native";
 import { PlaceCard } from "@/components/PlaceCard";
 import { useDebounce } from "@/hooks/use-debounce";
 import { usePlaces } from "@/hooks/use-places";
+import { useI18n } from "@/i18n/i18n-provider";
 import { type Place } from "@/types/place";
 
 export interface PlaceStepProps {
@@ -18,8 +19,6 @@ export interface PlaceStepProps {
   onSelect: (dayIndex: number, place: Place | null) => void;
 }
 
-const formatDay = (d: Date) => `${d.getMonth() + 1}월 ${d.getDate()}일`;
-
 /**
  * 관광지 선택 단계 (모든 날짜를 한 화면에서). 웹 PlaceStep의 RN 버전.
  *
@@ -28,6 +27,11 @@ const formatDay = (d: Date) => `${d.getMonth() + 1}월 ${d.getDate()}일`;
  * (선택하면 결과가 닫히고 날짜 슬롯이 갱신됨).
  */
 export function PlaceStep({ days, selected, onSelect }: PlaceStepProps) {
+  const { locale, t } = useI18n();
+  const formatDay = (date: Date) =>
+    new Intl.DateTimeFormat(locale, { month: "long", day: "numeric" }).format(
+      date,
+    );
   const [query, setQuery] = useState("");
   // 검색 결과가 채워질 대상 날짜 인덱스
   const [activeIndex, setActiveIndex] = useState(0);
@@ -61,24 +65,25 @@ export function PlaceStep({ days, selected, onSelect }: PlaceStepProps) {
       <View className="flex-row items-start gap-2 rounded-[12px] bg-surface-accent px-4 py-3">
         <Lightbulb size={18} color={colors.primary} style={{ marginTop: 2 }} />
         <Text className="flex-1 text-body-sm text-text-secondary">
-          날짜별로 방문할 관광지를 검색해 선택하세요. 선택하면 다음 날짜로
-          넘어갑니다.
+          {t("plan.place.hint")}
         </Text>
       </View>
 
       <Input
         size="md"
         placeholder={
-          activeDate ? `${formatDay(activeDate)} 관광지 검색` : "관광지 검색"
+          activeDate
+            ? t("plan.place.searchForDate", { date: formatDay(activeDate) })
+            : t("plan.place.search")
         }
-        accessibilityLabel="관광지 검색"
+        accessibilityLabel={t("plan.place.search")}
         value={query}
         onChangeText={setQuery}
         leftIcon={<Search size={18} color={colors["text-muted"]} />}
         rightIcon={
           query ? (
             <Pressable
-              accessibilityLabel="검색어 지우기"
+              accessibilityLabel={t("home.search.clear")}
               onPress={() => setQuery("")}
             >
               <X size={18} color={colors["text-muted"]} />
@@ -105,7 +110,7 @@ export function PlaceStep({ days, selected, onSelect }: PlaceStepProps) {
             ))
           ) : (
             <Text className="py-6 text-center text-body-sm text-text-muted">
-              {isSearching ? "불러오는 중…" : "검색 결과가 없습니다."}
+              {isSearching ? t("plan.place.loading") : t("home.search.empty")}
             </Text>
           )}
         </View>
@@ -126,7 +131,7 @@ export function PlaceStep({ days, selected, onSelect }: PlaceStepProps) {
                 }
               >
                 {formatDay(day)}
-                {isActive && " · 검색 대상"}
+                {isActive && ` · ${t("plan.place.searchTarget")}`}
               </Text>
 
               {place ? (
@@ -163,7 +168,7 @@ export function PlaceStep({ days, selected, onSelect }: PlaceStepProps) {
                         : "flex-1 text-body-sm text-text-muted"
                     }
                   >
-                    장소를 검색해 선택하세요
+                    {t("plan.place.select")}
                   </Text>
                 </Pressable>
               )}
