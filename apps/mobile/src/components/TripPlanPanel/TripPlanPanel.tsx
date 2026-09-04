@@ -13,7 +13,10 @@ import {
   Text,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import { useCourseSelection } from "@/hooks/use-course-selection";
 import { useMe } from "@/hooks/use-me";
@@ -45,6 +48,7 @@ export const TripPlanPanel = ({
   onClose,
   onViewPlace,
 }: TripPlanPanelProps) => {
+  const insets = useSafeAreaInsets();
   const { steps, reset: resetForm, buildPayload } = useTripPlanForm();
   const [step, setStep] = useState(0);
 
@@ -161,10 +165,11 @@ export const TripPlanPanel = ({
           style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.4)" }]}
         />
 
-        {/* 시트: 전체화면(flex-1) 기준 88% 확정 높이 → 내부 ScrollView가 정상 스크롤 */}
+        {/* 시트는 모달 뷰포트를 채우고 내부 ScrollView만 스크롤한다. */}
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
-          className="h-[88%] rounded-t-[20px] bg-bg"
+          className="flex-1 bg-bg"
+          style={{ paddingTop: insets.top }}
         >
           <SafeAreaView edges={["bottom"]} className="flex-1">
               <View className="flex-row items-center gap-2 px-4 py-3">
