@@ -16,7 +16,6 @@ import {
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   ScrollView,
   Text,
@@ -28,6 +27,8 @@ import {
 } from "react-native-safe-area-context";
 
 import { MapLibreMap } from "@/components/MapLibreMap";
+import { PlaceDefaultIcon } from "@/components/PlaceDefaultIcon";
+import { PlaceThumbnail } from "@/components/PlaceThumbnail";
 import { TopScrim } from "@/components/TopScrim";
 import {
   type MapBounds,
@@ -57,11 +58,11 @@ import {
 const FILTER_ALL = "all";
 
 // 지도 카테고리 필터 태그 (웹 홈과 동일). "전체"는 필터 해제.
-const CATEGORY_ITEMS: { value: string; name: string; icon?: string }[] = [
+const CATEGORY_ITEMS: { value: string; name: string }[] = [
   { value: FILTER_ALL, name: "전체" },
-  { value: "hospital", icon: "🏥", name: "병원" },
-  { value: "attraction", icon: "🗺️", name: "관광명소" },
-  { value: "accommodation", icon: "🏨", name: "숙소" },
+  { value: "hospital", name: "병원" },
+  { value: "attraction", name: "관광명소" },
+  { value: "accommodation", name: "숙소" },
 ];
 
 const PLACE_CATEGORIES: PlaceCategory[] = [
@@ -79,6 +80,8 @@ const placeToDetail = (place: Place): MarkerDetail => ({
   subtitle: place.categoryName || place.categoryGroupName || undefined,
   description: place.roadAddressName || place.addressName || undefined,
   image: place.image || undefined,
+  placeType: place.placeType,
+  primaryTypeName: place.primaryTypeName,
 });
 
 /**
@@ -467,9 +470,18 @@ export default function HomeScreen() {
                     <Pressable
                       key={place.id}
                       onPress={() => selectPlace(place)}
-                      className="border-b border-border px-4 py-3 active:bg-surface-muted"
+                      className="flex-row items-center gap-3 border-b border-border px-4 py-3 active:bg-surface-muted"
                     >
-                      <Text className="text-body-sm text-text">
+                      <PlaceThumbnail
+                        imageUrl={place.image}
+                        placeType={place.placeType}
+                        primaryTypeName={place.primaryTypeName}
+                        className="size-12"
+                      />
+                      <Text
+                        numberOfLines={1}
+                        className="flex-1 text-body-sm text-text"
+                      >
                         {place.placeName}
                       </Text>
                     </Pressable>
@@ -501,7 +513,17 @@ export default function HomeScreen() {
             <TagList.Item
               key={item.value}
               value={item.value}
-              icon={item.icon ? <Text>{item.icon}</Text> : undefined}
+              className="h-10"
+              icon={
+                item.value === FILTER_ALL ? undefined : (
+                  <PlaceDefaultIcon
+                    placeType={item.value}
+                    color={
+                      filter === item.value ? colors["neutral-0"] : undefined
+                    }
+                  />
+                )
+              }
             >
               {item.name}
             </TagList.Item>
@@ -510,6 +532,7 @@ export default function HomeScreen() {
             <TagList.Item
               key={course.selectionId}
               value={String(course.selectionId)}
+              className="h-10"
               icon={<Text>📍</Text>}
             >
               {courseTitle(course)}
@@ -541,17 +564,11 @@ export default function HomeScreen() {
             className="rounded-t-[16px] bg-neutral-0 shadow-md"
           >
             <View className="flex-row items-center gap-3 px-5 pt-4 pb-2">
-              {detail.detail.image ? (
-                <Image
-                  source={{ uri: detail.detail.image }}
-                  accessibilityIgnoresInvertColors
-                  resizeMode="cover"
-                  className="size-16 rounded-[10px] bg-surface-muted"
-                />
-              ) : (
-                // 이미지 없으면 스켈레톤형 빈 이미지(회색 박스). 코드베이스 스켈레톤과 동일.
-                <View className="size-16 rounded-[10px] bg-surface-muted" />
-              )}
+              <PlaceThumbnail
+                imageUrl={detail.detail.image}
+                placeType={detail.detail.placeType}
+                primaryTypeName={detail.detail.primaryTypeName}
+              />
               <View className="flex-1">
                 <Text numberOfLines={1} className="text-heading-sm text-text">
                   {detail.detail.title}
