@@ -1,10 +1,20 @@
 import { colors } from "@afterglow/tokens";
-import { CalendarDays, Home, MapPin, Route, Sparkles } from "lucide-react-native";
-import { Text, View } from "react-native";
+import {
+  CalendarDays,
+  ChevronRight,
+  Home,
+  MapPin,
+  Route,
+  Sparkles,
+} from "lucide-react-native";
+import { Pressable, Text, View } from "react-native";
 
 import {
+  type CourseMarker,
+  courseStartToMarker,
   courseSummary,
   type DailySchedule,
+  recommendedPlaceToMarker,
   type RecommendedCourse,
   type RecommendedPlace,
 } from "@/types/recommendation";
@@ -75,13 +85,43 @@ function TimelineNode({
   );
 }
 
-/** 방문 장소 한 곳. */
+/**
+ * 노드 본문을 탭 가능하게 감싼다. onPress가 없으면(저장 코스 상세 등) 그대로 렌더.
+ * 탭 가능하면 이름 옆에 셰브론을 곁들여 "눌러서 상세" 어포던스를 준다.
+ */
+function NodeBody({
+  onPress,
+  label,
+  children,
+}: {
+  onPress?: () => void;
+  label: string;
+  children: React.ReactNode;
+}) {
+  if (!onPress) {
+    return <>{children}</>;
+  }
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      className="active:opacity-70"
+    >
+      {children}
+    </Pressable>
+  );
+}
+
+/** 방문 장소 한 곳. onPress가 주어지면 탭해서 지도 상세로 이동할 수 있다. */
 function PlaceNode({
   place,
   isLast,
+  onPress,
 }: {
   place: RecommendedPlace;
   isLast: boolean;
+  onPress?: () => void;
 }) {
   const meta = [
     place.place_category,
@@ -96,19 +136,26 @@ function PlaceNode({
         <Text className="text-label-sm text-primary">{place.visit_order}</Text>
       }
     >
-      {place.dist_to_prev_km > 0 ? (
-        <Text className="text-caption text-text-muted">
-          이전 지점서 {place.dist_to_prev_km}km 이동
-        </Text>
-      ) : null}
-      <Text className="text-label-lg text-text">{place.place_name}</Text>
-      {meta.length > 0 ? (
-        <View className="mt-1.5 flex-row flex-wrap gap-1.5">
-          {meta.map((m) => (
-            <MetaChip key={m}>{m}</MetaChip>
-          ))}
+      <NodeBody onPress={onPress} label={`${place.place_name} 지도에서 보기`}>
+        {place.dist_to_prev_km > 0 ? (
+          <Text className="text-caption text-text-muted">
+            이전 지점서 {place.dist_to_prev_km}km 이동
+          </Text>
+        ) : null}
+        <View className="flex-row items-center gap-1">
+          <Text className="text-label-lg text-text">{place.place_name}</Text>
+          {onPress ? (
+            <ChevronRight size={16} color={colors["text-muted"]} />
+          ) : null}
         </View>
-      ) : null}
+        {meta.length > 0 ? (
+          <View className="mt-1.5 flex-row flex-wrap gap-1.5">
+            {meta.map((m) => (
+              <MetaChip key={m}>{m}</MetaChip>
+            ))}
+          </View>
+        ) : null}
+      </NodeBody>
     </TimelineNode>
   );
 }
@@ -118,10 +165,13 @@ function DaySection({
   day,
   index,
   treatments,
+  onPlacePress,
 }: {
   day: DailySchedule;
   index: number;
   treatments: RecommendedCourse["treatment"];
+  /** 노드(출발지·방문 장소) 탭 시 해당 지점 마커로 호출. 없으면 비대화형. */
+  onPlacePress?: (marker: CourseMarker) => void;
 }) {
   const dayTreatments = treatments.filter((t) => t.date === day.date);
 
@@ -149,8 +199,24 @@ function DaySection({
         isLast={day.places.length === 0}
         node={<Home size={14} color={colors.primary} />}
       >
-        <Text className="text-caption text-primary">출발</Text>
-        <Text className="text-label-lg text-text">{day.start_location.name}</Text>
+        <NodeBody
+          onPress={
+            onPlacePress
+              ? () => onPlacePress(courseStartToMarker(day.start_location))
+              : undefined
+          }
+          label={`${day.start_location.name} 지도에서 보기`}
+        >
+          <Text className="text-caption text-primary">출발</Text>
+          <View className="flex-row items-center gap-1">
+            <Text className="text-label-lg text-text">
+              {day.start_location.name}
+            </Text>
+            {onPlacePress ? (
+              <ChevronRight size={16} color={colors["text-muted"]} />
+            ) : null}
+          </View>
+        </NodeBody>
       </TimelineNode>
 
       {day.places.map((place, i) => (
@@ -158,6 +224,11 @@ function DaySection({
           key={place.visit_order}
           place={place}
           isLast={i === day.places.length - 1}
+          onPress={
+            onPlacePress
+              ? () => onPlacePress(recommendedPlaceToMarker(place))
+              : undefined
+          }
         />
       ))}
     </View>
@@ -169,7 +240,14 @@ function DaySection({
  * 저장 코스 상세(CourseDetail)와 추천 결과(ResultStep)가 동일한 표현을 공유하도록
  * 분리한 재사용 컴포넌트. RecommendedCourse면 되므로 SavedCourse도 그대로 받는다.
  */
-export function CourseItinerary({ course }: { course: RecommendedCourse }) {
+export function CourseItinerary({
+  course,
+  onPlacePress,
+}: {
+  course: RecommendedCourse;
+  /** 타임라인 노드 탭 시 해당 지점 마커로 호출(추천 패널 전용). 없으면 비대화형. */
+  onPlacePress?: (marker: CourseMarker) => void;
+}) {
   const { days, placeCount, distanceKm } = courseSummary(course);
 
   return (
@@ -211,6 +289,7 @@ export function CourseItinerary({ course }: { course: RecommendedCourse }) {
           day={day}
           index={i}
           treatments={course.treatment}
+          onPlacePress={onPlacePress}
         />
       ))}
     </View>

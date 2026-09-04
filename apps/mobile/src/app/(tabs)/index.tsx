@@ -41,7 +41,11 @@ import { usePlaces } from "@/hooks/use-places";
 import { useRecommendations } from "@/hooks/use-recommendations";
 import { type PlaceCategory } from "@/lib/places";
 import { type Place } from "@/types/place";
-import { courseTitle, savedCourseToMarkers } from "@/types/recommendation";
+import {
+  type CourseMarker,
+  courseTitle,
+  savedCourseToMarkers,
+} from "@/types/recommendation";
 
 // 필터 해제(기본) 값. "전체" = 모든 마커 해제. 저장 코스 태그는 selectionId 문자열,
 // 카테고리 태그는 PlaceCategory 문자열을 값으로 쓴다.
@@ -84,6 +88,11 @@ export default function HomeScreen() {
   const router = useRouter();
   const showToast = useToastStore((s) => s.show);
   const [planOpen, setPlanOpen] = useState(false);
+  // 추천 코스에서 탭한 장소의 마커(지도에 찍고 카메라 이동 + 상세 카드 표시).
+  // null이 아니면 "패널에서 열린 상세"라는 뜻 → 상세 카드 X를 누르면 패널로 복귀한다.
+  const [coursePlaceMarker, setCoursePlaceMarker] = useState<MapMarker | null>(
+    null,
+  );
 
   const [search, setSearch] = useState("");
   // 드롭다운 열림 여부. 결과 선택 시 닫아 재요청을 막는다.
@@ -163,12 +172,16 @@ export default function HomeScreen() {
   };
 
   // 여행 계획(코스 추천)은 로그인 필요. 비로그인 시 안내 후 로그인 화면으로 유도.
+  // 패널은 닫아도 상태가 보존되므로, 열면 이전 진행(폼/추천/rank)을 그대로 이어간다.
+  // 패널로 들어갈 땐 코스 장소 상세 보기는 정리한다.
   const openPlan = () => {
     if (!isAuthed) {
       showToast("로그인 후 코스를 추천받을 수 있어요");
       router.push("/my-page");
       return;
     }
+    setCoursePlaceMarker(null);
+    setDetail(null);
     setPlanOpen(true);
   };
 
@@ -182,12 +195,27 @@ export default function HomeScreen() {
     setRouteLines([]);
   }, [cancelRoute]);
 
+  // 추천 코스에서 장소 탭: 패널을 잠시 내리고(상태 보존) 지도에서 해당 지점으로 이동 +
+  // 상세 카드를 연다. 이 상세는 coursePlaceMarker로 표시되어, X를 누르면 패널로 복귀한다.
+  // (resetRoutePlan 정의 이후에 둔다 — React Compiler 메모 보존을 위해 forward-ref 회피)
+  const viewCoursePlace = (marker: CourseMarker) => {
+    resetRoutePlan();
+    setSearch("");
+    setSearchOpen(false);
+    setSelectedPlace(null);
+    setFilter(FILTER_ALL);
+    setCoursePlaceMarker(marker);
+    setDetail(marker);
+    setPlanOpen(false);
+  };
+
   const selectPlace = (place: Place) => {
     setSearch(place.placeName);
     setSearchOpen(false);
     setSelectedPlace(place);
     // 검색 장소를 고르면 코스 선택은 해제한다(마커 대상은 하나만).
     setFilter(FILTER_ALL);
+    setCoursePlaceMarker(null);
     resetRoutePlan();
     // 선택한 장소의 마커 상세를 바로 띄운다(마커를 탭한 것과 동일한 카드).
     setDetail({
@@ -214,13 +242,20 @@ export default function HomeScreen() {
     setFilter(value);
     setSelectedPlace(null);
     setDetail(null);
+    setCoursePlaceMarker(null);
     resetRoutePlan();
   };
 
-  // 상세 카드 닫기: 상세와 그린 경로를 정리하고 진행 중 경로 요청은 취소한다.
+  // 상세 카드 닫기(X). 패널에서 열린 상세(coursePlaceMarker)면 닫는 대신 패널로 복귀한다.
+  // 일반 상세(검색/마커/카테고리)는 그냥 닫는다. 어느 쪽이든 그린 경로는 정리한다.
   const closeDetail = () => {
+    const fromPanel = coursePlaceMarker !== null;
     setDetail(null);
+    setCoursePlaceMarker(null);
     resetRoutePlan();
+    if (fromPanel) {
+      setPlanOpen(true);
+    }
   };
 
   // "경로 안내": 경로 설정 패널을 연다. 시작지=현위치(기본), 도착지=클릭한 장소(기본).
@@ -331,8 +366,12 @@ export default function HomeScreen() {
     return pins;
   }, [routePlanOpen, startPoint, endPoint]);
 
-  // 마커 우선순위: 검색 장소 → 선택 코스 → 선택 카테고리 (전체는 없음). 웹 홈과 동일.
+  // 마커 우선순위: 추천 코스 장소 → 검색 장소 → 선택 코스 → 선택 카테고리.
+  // 추천 코스에서 장소를 탭하면 그 한 지점만 찍어 카메라가 이동한다(단일 마커 flyTo).
   const markers = useMemo<MapMarker[]>(() => {
+    if (coursePlaceMarker) {
+      return [coursePlaceMarker];
+    }
     if (selectedPlace) {
       return [
         {
@@ -350,7 +389,7 @@ export default function HomeScreen() {
       label: place.placeName,
       detail: placeToDetail(place),
     }));
-  }, [selectedPlace, selectedCourse, categoryPlaces]);
+  }, [coursePlaceMarker, selectedPlace, selectedCourse, categoryPlaces]);
 
   return (
     <View className="flex-1 bg-bg">
@@ -473,7 +512,11 @@ export default function HomeScreen() {
         <Plus size={28} color={colors["on-action-primary"]} />
       </Pressable>
 
-      <TripPlanPanel open={planOpen} onClose={() => setPlanOpen(false)} />
+      <TripPlanPanel
+        open={planOpen}
+        onClose={() => setPlanOpen(false)}
+        onViewPlace={viewCoursePlace}
+      />
 
       {/* 마커 클릭 상세 카드 — 하단 오버레이(태그리스트 위). 경로 설정 중엔 패널로 대체. */}
       {detail?.detail && !routePlanOpen && (

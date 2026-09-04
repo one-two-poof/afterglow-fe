@@ -171,3 +171,23 @@ export function savedCourseToMarkers(course: SavedCourse): CourseMarker[] {
     })),
   ]);
 }
+
+/** 코스의 방문 장소(RecommendedPlace) 하나를 지도 마커(좌표+상세 카드)로 변환. */
+export function recommendedPlaceToMarker(place: RecommendedPlace): CourseMarker {
+  return {
+    ...courseToLatLng(place),
+    label: place.place_name,
+    detail: placeToDetail(place),
+  };
+}
+
+/** 코스의 하루 출발지(start_location)를 지도 마커(좌표+상세 카드)로 변환. */
+export function courseStartToMarker(
+  start: DailySchedule["start_location"],
+): CourseMarker {
+  return {
+    ...courseToLatLng(start),
+    label: start.name,
+    detail: { title: start.name, subtitle: "출발지" },
+  };
+}
