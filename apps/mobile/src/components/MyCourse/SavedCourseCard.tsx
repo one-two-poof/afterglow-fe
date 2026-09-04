@@ -11,14 +11,26 @@ import { Pressable, Text, View } from "react-native";
 import {
   courseSummary,
   courseTitle,
+  type DailySchedule,
   type SavedCourse,
 } from "@/types/recommendation";
 
-/** "YYYY-MM-DDTHH:mm..." → "M월 D일 저장" (앞 10자리만 파싱, 타임존 무관) */
-const formatSavedAt = (iso: string) => {
+/** "YYYY-MM-DD..." → "M월 D일" (앞 10자리만 파싱, 타임존 무관) */
+const formatMonthDay = (iso: string) => {
   const [, month, day] = iso.slice(0, 10).split("-");
   if (!month || !day) return "";
-  return `${Number(month)}월 ${Number(day)}일 저장`;
+  return `${Number(month)}월 ${Number(day)}일`;
+};
+
+/** 코스 일정의 시작~종료 날짜 표시. 하루짜리면 단일 날짜만. */
+const formatCourseRange = (schedules: DailySchedule[]) => {
+  const start = schedules[0]?.date;
+  if (!start) return "";
+  const startLabel = formatMonthDay(start);
+  const endLabel = formatMonthDay(schedules[schedules.length - 1]!.date);
+  return !endLabel || startLabel === endLabel
+    ? startLabel
+    : `${startLabel} ~ ${endLabel}`;
 };
 
 /** 요약 통계 한 칸 (아이콘 + 값). 카드 하단 메타 행에 3개 나열. */
@@ -47,7 +59,7 @@ export function SavedCourseCard({ course }: { course: SavedCourse }) {
   const router = useRouter();
   const title = courseTitle(course);
   const { days, placeCount, distanceKm } = courseSummary(course);
-  const savedAt = formatSavedAt(course.selectedAt);
+  const dateRange = formatCourseRange(course.daily_schedules);
 
   return (
     <Pressable
@@ -61,8 +73,8 @@ export function SavedCourseCard({ course }: { course: SavedCourse }) {
           <MapPin size={20} color={colors.primary} />
         </View>
         <View className="min-w-0 flex-1">
-          {savedAt ? (
-            <Text className="text-caption text-text-muted">{savedAt}</Text>
+          {dateRange ? (
+            <Text className="text-caption text-text-muted">{dateRange}</Text>
           ) : null}
           <Text numberOfLines={1} className="text-label-lg text-text">
             {title}
