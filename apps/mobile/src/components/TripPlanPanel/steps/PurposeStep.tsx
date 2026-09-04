@@ -2,11 +2,49 @@ import { colors } from "@afterglow/tokens";
 import { cn } from "@afterglow/utils";
 import { Check } from "lucide-react-native";
 import { Pressable, Text, View } from "react-native";
+import Svg, { Path } from "react-native-svg";
+
+type PurposeIconName = "beauty-shopping" | "culture-tour" | "rest";
+
+const PURPOSE_ICON_COLOR = "#0787d0";
+const PURPOSE_ICON_PATHS: Record<PurposeIconName, string[]> = {
+  "beauty-shopping": [
+    "M6.331 8h11.339a2 2 0 0 1 1.977 2.304l-1.255 8.152a3 3 0 0 1-2.966 2.544H8.574a3 3 0 0 1-2.965-2.544l-1.255-8.152A2 2 0 0 1 6.331 8",
+    "M9 11V6a3 3 0 0 1 6 0v5",
+  ],
+  "culture-tour": [
+    "M12 18.5 9 17l-6 3V7l6-3 6 3 6-3v7",
+    "M9 4v13",
+    "M15 7v5",
+    "M21.121 20.121a3 3 0 1 0-4.242 0c.418.419 1.125 1.045 2.121 1.879 1.051-.89 1.759-1.516 2.121-1.879",
+    "M19 18v.01",
+  ],
+  rest: [
+    "m15 7.5-1.5-2.004 1.5-1.5 1-1.5h1.5l1.5 1.5h2l1.5 1.5L21 7.5zM.5 23.496h23m-10-3.996v3.996m6-3.996v3.996m-8-3.996h10m-16 3.996v-4m0 0-3.5-2.5L5.5.5 9 16.996z",
+  ],
+};
+
+function PurposeIcon({ name }: { name: PurposeIconName }) {
+  return (
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+      {PURPOSE_ICON_PATHS[name].map((path) => (
+        <Path
+          key={path}
+          d={path}
+          stroke={PURPOSE_ICON_COLOR}
+          strokeWidth={1}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      ))}
+    </Svg>
+  );
+}
 
 export interface PurposeOption {
   /** 제출 값(한글) 겸 표시 라벨 */
   value: string;
-  emoji: string;
+  icon: PurposeIconName;
   description: string;
 }
 
@@ -14,17 +52,17 @@ export interface PurposeOption {
 export const PURPOSES: PurposeOption[] = [
   {
     value: "문화관광",
-    emoji: "🛍️",
+    icon: "culture-tour",
     description: "한국의 트렌디한 쇼핑몰과 도심 랜드마크 탐방",
   },
   {
     value: "뷰티쇼핑",
-    emoji: "🍰",
+    icon: "beauty-shopping",
     description: "핫플레이스 맛집투어와 감성 카페 거리",
   },
   {
     value: "휴식",
-    emoji: "🌳",
+    icon: "rest",
     description: "도심 속 정원, 한강 공원, 고궁 산책을 통한 안정",
   },
 ];
@@ -56,7 +94,7 @@ export function PurposeStep({ value, onChange }: PurposeStepProps) {
             )}
           >
             <View className="size-16 items-center justify-center rounded-[10px] bg-surface-muted">
-              <Text style={{ fontSize: 30 }}>{option.emoji}</Text>
+              <PurposeIcon name={option.icon} />
             </View>
 
             <View className="flex-1">
