@@ -66,7 +66,14 @@ const SEOUL: [number, number] = [126.978, 37.5665];
  */
 export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
   function MapLibreMap(
-    { markers = [], onMarkerPress, routeLines = [], routePins = [] },
+    {
+      markers = [],
+      autoFitMarkers = true,
+      onMarkerPress,
+      routeLines = [],
+      routePins = [],
+      onRegionChange,
+    },
     ref,
   ) {
     const cameraRef = useRef<CameraRef>(null);
@@ -124,6 +131,29 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
         // 쿼리 실패(스타일 미로드 등)는 다음 이동에서 다시 시도되므로 무시.
       }
     }, []);
+
+    // 현재 뷰포트 경계를 호출부에 보고한다(뷰포트 기반 장소 조회용).
+    // getBounds는 LngLatBounds = [west, south, east, north] 형태를 준다.
+    const reportRegion = useCallback(async () => {
+      if (!onRegionChange) {
+        return;
+      }
+      const map = mapRef.current;
+      if (!map) {
+        return;
+      }
+      try {
+        const [west, south, east, north] = await map.getBounds();
+        onRegionChange({
+          swLng: west,
+          swLat: south,
+          neLng: east,
+          neLat: north,
+        });
+      } catch {
+        // 스타일 미로드 등 실패는 다음 이동에서 다시 시도되므로 무시.
+      }
+    }, [onRegionChange]);
 
     // 마커를 개별 <Marker> 뷰 오버레이로 그리면 지점 수만큼 네이티브 View가 생기고
     // 지도를 움직일 때마다 전부 재배치돼 느리다(카테고리는 전체를 받아 수십~수백 건).
@@ -216,9 +246,10 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
       };
     }, []);
 
-    // markers가 바뀌면 그 지점들로 카메라 이동
+    // markers가 바뀌면 그 지점들로 카메라 이동 (autoFitMarkers=false면 이동 안 함:
+    // 뷰포트 기반 카테고리 조회에서 카메라 자동 이동 → 재조회 루프를 막는다)
     useEffect(() => {
-      if (markers.length === 0) {
+      if (markers.length === 0 || !autoFitMarkers) {
         return;
       }
       // 마커가 카메라를 잡았음을 표시 → 뒤늦게 도착한 초기 현위치 이동을 막는다.
@@ -243,7 +274,7 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
         ],
         { duration: 600 },
       );
-    }, [markers]);
+    }, [markers, autoFitMarkers]);
 
     // 경로가 그려지면 전체 경로가 보이도록 카메라 이동(패딩 줘서 잘리지 않게).
     useEffect(() => {
@@ -281,10 +312,14 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
           // 웹의 attributionControl:false와 동일 — 정보(ⓘ) 버튼·로고 숨김
           attribution={false}
           logo={false}
-          // 이동/줌 종료 시 그림자 재계산
-          onRegionDidChange={() => void updateShadows()}
-          // 최초 타일 렌더 완료 시 1회 계산(정지 상태에서도 그림자가 뜨도록)
+          // 이동/줌 종료 시 그림자 재계산 + 뷰포트 경계 보고
+          onRegionDidChange={() => {
+            void updateShadows();
+            void reportRegion();
+          }}
+          // 최초 타일 렌더 완료 시 1회 계산(정지 상태에서도 그림자가 뜨도록) + 초기 뷰포트 보고
           onDidFinishRenderingMapFully={() => {
+            void reportRegion();
             if (didInitialShadowRef.current) {
               return;
             }
