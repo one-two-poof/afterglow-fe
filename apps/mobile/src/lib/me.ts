@@ -12,3 +12,8 @@ export async function getMe(): Promise<AuthUser> {
   const { data } = await apiClient.get<AuthUser>("/api/auth/me");
   return data;
 }
+
+/** 현재 로그인한 사용자의 계정과 연결된 데이터를 삭제한다. */
+export async function deleteMe(): Promise<void> {
+  await apiClient.delete("/api/auth/me");
+}
