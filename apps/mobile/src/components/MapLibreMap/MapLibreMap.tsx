@@ -29,6 +29,7 @@ import {
 import { env } from "@/lib/env";
 import { getCurrentLocation } from "@/lib/location";
 import { ROUTE_COLORS } from "@/lib/route";
+import { useI18n } from "@/i18n/i18n-provider";
 
 import { type MapLibreMapProps, type MapLibreMapRef } from "./types";
 
@@ -76,6 +77,7 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
     },
     ref,
   ) {
+    const { t } = useI18n();
     const cameraRef = useRef<CameraRef>(null);
     const mapRef = useRef<MapRef>(null);
 
@@ -428,7 +430,7 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
 
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="기본 위치로 이동"
+          accessibilityLabel={t("map.recenter")}
           onPress={() => void recenter()}
           className="absolute bottom-24 left-5 size-14 items-center justify-center rounded-full bg-neutral-0 shadow-md active:bg-surface-muted"
         >

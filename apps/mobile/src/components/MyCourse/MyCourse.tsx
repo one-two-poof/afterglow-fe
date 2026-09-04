@@ -7,6 +7,7 @@ import { LoginPrompt } from "@/components/MyPage/LoginPrompt";
 import { useAccessToken } from "@/hooks/use-access-token";
 import { useRecommendations } from "@/hooks/use-recommendations";
 import { clearAccessToken, UnauthorizedError } from "@/lib/auth";
+import { useI18n } from "@/i18n/i18n-provider";
 
 import { MyCourseSkeleton } from "./MyCourseSkeleton";
 import { SavedCourseCard } from "./SavedCourseCard";
@@ -20,6 +21,7 @@ import { SavedCourseCard } from "./SavedCourseCard";
  * 인증 도입 후 저장 코스 리스트가 실제로 렌더된다.
  */
 export function MyCourse() {
+  const { t } = useI18n();
   const token = useAccessToken();
   const isAuthed = typeof token === "string";
 
@@ -58,14 +60,14 @@ export function MyCourse() {
         <View className="flex-1 items-center justify-center gap-4 px-6">
           <View className="items-center gap-2">
             <Text className="text-heading-sm text-text">
-              코스를 불러오지 못했어요
+              {t("courses.loadFailed")}
             </Text>
             <Text className="text-body-sm text-text-secondary">
-              잠시 후 다시 시도해 주세요.
+              {t("common.tryAgainLater")}
             </Text>
           </View>
           <Button variant="secondary" size="md" onPress={() => refetch()}>
-            다시 시도
+            {t("common.retry")}
           </Button>
         </View>
       </SafeAreaView>
@@ -75,13 +77,13 @@ export function MyCourse() {
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-bg">
       <ScrollView contentContainerClassName="gap-4 px-5 py-6">
-        <Text className="text-heading-sm text-text">내 코스</Text>
+        <Text className="text-heading-sm text-text">{t("courses.title")}</Text>
 
         {courses.length === 0 ? (
           <View className="items-center justify-center gap-2 py-24">
-            <Text className="text-body-md text-text">저장된 코스가 없어요</Text>
+            <Text className="text-body-md text-text">{t("courses.empty")}</Text>
             <Text className="text-center text-body-sm text-text-muted">
-              여행 일정을 만들고 마음에 드는 코스를 저장해보세요.
+              {t("courses.emptyDescription")}
             </Text>
           </View>
         ) : (

@@ -1,5 +1,9 @@
-import { cn, formatISODate, WEEKDAYS_KO } from "@afterglow/utils";
+import { cn, formatISODate } from "@afterglow/utils";
 import { Pressable, Text, View } from "react-native";
+
+import { useI18n } from "@/i18n/i18n-provider";
+
+import { TREATMENTS } from "./TreatmentStep";
 
 export interface TreatmentDateStepProps {
   /** 선택된 시술 종류 */
@@ -18,15 +22,21 @@ export function TreatmentDateStep({
   value,
   onAssign,
 }: TreatmentDateStepProps) {
+  const { locale, t } = useI18n();
   return (
     <View className="gap-3 pt-2">
       <Text className="text-body-sm text-text-secondary">
-        각 시술을 받을 날짜를 선택해주세요
+        {t("plan.treatmentDate.prompt")}
       </Text>
 
       {treatments.map((treatment) => (
         <View key={treatment} className="gap-3 rounded-[16px] bg-surface p-4">
-          <Text className="text-label-lg text-text">{treatment}</Text>
+          <Text className="text-label-lg text-text">
+            {(() => {
+              const option = TREATMENTS.find((item) => item.name === treatment);
+              return option ? t(option.labelKey) : treatment;
+            })()}
+          </Text>
           <View className="flex-row gap-2">
             {days.map((day, i) => {
               const iso = formatISODate(day);
@@ -36,7 +46,7 @@ export function TreatmentDateStep({
                   key={iso}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
-                  accessibilityLabel={`${treatment} ${i + 1}일차 ${day.getMonth() + 1}월 ${day.getDate()}일`}
+                  accessibilityLabel={`${treatment}, Day ${i + 1}, ${new Intl.DateTimeFormat(locale, { dateStyle: "full" }).format(day)}`}
                   onPress={() => onAssign(treatment, iso)}
                   className={cn(
                     "flex-1 items-center gap-0.5 rounded-[12px] border-2 py-3",
@@ -59,8 +69,11 @@ export function TreatmentDateStep({
                       active ? "text-primary-700" : "text-text-secondary",
                     )}
                   >
-                    {day.getMonth() + 1}/{day.getDate()} (
-                    {WEEKDAYS_KO[day.getDay()]})
+                    {new Intl.DateTimeFormat(locale, {
+                      month: "numeric",
+                      day: "numeric",
+                      weekday: "short",
+                    }).format(day)}
                   </Text>
                 </Pressable>
               );

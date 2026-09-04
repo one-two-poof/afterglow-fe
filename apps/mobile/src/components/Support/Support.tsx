@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { useI18n } from "@/i18n/i18n-provider";
 
 import { FAQ_ITEMS, type FaqItem, SUPPORT_EMAIL } from "./support-content";
 
@@ -40,9 +41,10 @@ function FaqRow({ item, isLast }: { item: FaqItem; isLast: boolean }) {
  * 설정 목록의 "고객센터"에서 진입한다.
  */
 export function Support() {
+  const { t } = useI18n();
   return (
     <View className="flex-1 bg-bg">
-      <ScreenHeader title="고객센터" />
+      <ScreenHeader title={t("support.title")} />
       <ScrollView contentContainerClassName="gap-6 px-5 py-6 pb-10">
         {/* 1:1 문의 채널 */}
         <View className="gap-4 rounded-[16px] border border-border bg-surface p-5">
@@ -51,16 +53,20 @@ export function Support() {
               <Mail size={20} color={colors.primary} />
             </View>
             <View className="flex-1">
-              <Text className="text-label-lg text-text">1:1 문의</Text>
+              <Text className="text-label-lg text-text">
+                {t("support.contact")}
+              </Text>
               <Text className="mt-0.5 text-body-sm text-text-muted">
-                궁금한 점을 이메일로 보내주세요.
+                {t("support.contactHint")}
               </Text>
             </View>
           </View>
 
           <View className="gap-2 border-t border-border pt-3">
             <View className="flex-row items-center justify-between">
-              <Text className="text-body-sm text-text-muted">이메일</Text>
+              <Text className="text-body-sm text-text-muted">
+                {t("support.email")}
+              </Text>
               <Text className="text-body-sm text-text">{SUPPORT_EMAIL}</Text>
             </View>
           </View>
@@ -68,7 +74,7 @@ export function Support() {
 
         {/* 자주 묻는 질문 */}
         <View className="gap-3">
-          <Text className="text-label-lg text-text">자주 묻는 질문</Text>
+          <Text className="text-label-lg text-text">{t("support.faq")}</Text>
           <View className="overflow-hidden rounded-[16px] border border-border bg-surface">
             {FAQ_ITEMS.map((item, i) => (
               <FaqRow

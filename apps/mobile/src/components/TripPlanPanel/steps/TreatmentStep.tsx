@@ -4,6 +4,9 @@ import { Check } from "lucide-react-native";
 import { Pressable, Text, View } from "react-native";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
 
+import type { TranslationKey } from "@/i18n/config";
+import { useI18n } from "@/i18n/i18n-provider";
+
 type TreatmentIconName =
   | "윤곽/체형주사"
   | "보톡스"
@@ -146,21 +149,26 @@ function TreatmentIcon({ name }: { name: TreatmentIconName }) {
 export interface TreatmentOption {
   /** 제출 값(한글) 겸 표시 라벨 */
   name: string;
+  labelKey: TranslationKey;
   icon: TreatmentIconName;
 }
 
 /** 선택 가능한 시술 종류. name이 곧 제출 값 */
 export const TREATMENTS: TreatmentOption[] = [
-  { name: "리프팅", icon: "리프팅" },
-  { name: "보톡스", icon: "보톡스" },
-  { name: "비만(약처방)", icon: "비만(약처방)" },
-  { name: "스킨부스터", icon: "스킨부스터" },
-  { name: "윤곽/체형주사", icon: "윤곽/체형주사" },
-  { name: "제모", icon: "제모" },
-  { name: "피부관리", icon: "피부관리" },
-  { name: "피부레이저", icon: "피부레이저" },
-  { name: "필러", icon: "필러" },
-  { name: "필링", icon: "필링" },
+  { name: "리프팅", labelKey: "treatment.lifting", icon: "리프팅" },
+  { name: "보톡스", labelKey: "treatment.botox", icon: "보톡스" },
+  { name: "비만(약처방)", labelKey: "treatment.obesity", icon: "비만(약처방)" },
+  { name: "스킨부스터", labelKey: "treatment.skinBooster", icon: "스킨부스터" },
+  {
+    name: "윤곽/체형주사",
+    labelKey: "treatment.contour",
+    icon: "윤곽/체형주사",
+  },
+  { name: "제모", labelKey: "treatment.hairRemoval", icon: "제모" },
+  { name: "피부관리", labelKey: "treatment.skinCare", icon: "피부관리" },
+  { name: "피부레이저", labelKey: "treatment.skinLaser", icon: "피부레이저" },
+  { name: "필러", labelKey: "treatment.filler", icon: "필러" },
+  { name: "필링", labelKey: "treatment.peeling", icon: "필링" },
 ];
 
 export interface TreatmentStepProps {
@@ -170,10 +178,11 @@ export interface TreatmentStepProps {
 
 /** 시술 종류 선택 (다중 선택). name 문자열을 그대로 제출. 웹은 grid-cols-2 → RN은 2열 wrap */
 export function TreatmentStep({ selected, onToggle }: TreatmentStepProps) {
+  const { t } = useI18n();
   return (
     <View className="gap-3 pt-2">
       <Text className="text-body-sm text-text-secondary">
-        받으실 시술 종류를 선택해주세요 (다중 선택 가능)
+        {t("plan.treatment.prompt")}
       </Text>
 
       <View className="flex-row flex-wrap justify-between">
@@ -207,7 +216,9 @@ export function TreatmentStep({ selected, onToggle }: TreatmentStepProps) {
                   )}
                 </View>
               </View>
-              <Text className="text-label-lg text-text">{option.name}</Text>
+              <Text className="text-label-lg text-text">
+                {t(option.labelKey)}
+              </Text>
             </Pressable>
           );
         })}

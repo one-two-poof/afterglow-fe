@@ -2,6 +2,8 @@ import { colors } from "@afterglow/tokens";
 import { Tabs } from "expo-router";
 import { Home, LineSquiggle, User } from "lucide-react-native";
 
+import { useI18n } from "@/i18n/i18n-provider";
+
 /**
  * 하단 탭 네비게이션. 웹의 Footer(홈/내 코스/내 정보)에 대응한다.
  *
@@ -13,6 +15,8 @@ import { Home, LineSquiggle, User } from "lucide-react-native";
  * 아이콘도 웹 Footer와 같은 lucide 셋(react-native 버전).
  */
 export default function TabsLayout() {
+  const { t } = useI18n();
+
   return (
     <Tabs
       screenOptions={{
@@ -24,14 +28,14 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "홈",
+          title: t("tabs.home"),
           tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="my-course"
         options={{
-          title: "내 코스",
+          title: t("tabs.courses"),
           tabBarIcon: ({ color, size }) => (
             <LineSquiggle color={color} size={size} />
           ),
@@ -40,7 +44,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="my-page"
         options={{
-          title: "내 정보",
+          title: t("tabs.profile"),
           tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
         }}
       />

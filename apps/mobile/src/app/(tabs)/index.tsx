@@ -45,6 +45,7 @@ import { useCategoryPlaces } from "@/hooks/use-category-places";
 import { useDebounce } from "@/hooks/use-debounce";
 import { usePlaces } from "@/hooks/use-places";
 import { useRecommendations } from "@/hooks/use-recommendations";
+import { useI18n } from "@/i18n/i18n-provider";
 import { type PlaceCategory } from "@/lib/places";
 import { type Place } from "@/types/place";
 import {
@@ -58,13 +59,6 @@ import {
 const FILTER_ALL = "all";
 
 // 지도 카테고리 필터 태그 (웹 홈과 동일). "전체"는 필터 해제.
-const CATEGORY_ITEMS: { value: string; name: string }[] = [
-  { value: FILTER_ALL, name: "전체" },
-  { value: "hospital", name: "병원" },
-  { value: "attraction", name: "관광명소" },
-  { value: "accommodation", name: "숙소" },
-];
-
 const PLACE_CATEGORIES: PlaceCategory[] = [
   "hospital",
   "attraction",
@@ -93,6 +87,7 @@ const placeToDetail = (place: Place): MarkerDetail => ({
  * "전체"는 모든 마커를 해제한다.
  */
 export default function HomeScreen() {
+  const { t } = useI18n();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const showToast = useToastStore((s) => s.show);
@@ -187,7 +182,7 @@ export default function HomeScreen() {
   // 패널로 들어갈 땐 코스 장소 상세 보기는 정리한다.
   const openPlan = () => {
     if (!isAuthed) {
-      showToast("로그인 후 코스를 추천받을 수 있어요");
+      showToast(t("home.plan.loginRequired"));
       router.push("/my-page");
       return;
     }
@@ -330,7 +325,7 @@ export default function HomeScreen() {
           return;
         }
         if (!loc) {
-          showToast("위치 권한이 필요해요");
+          showToast(t("route.locationPermission"));
           return;
         }
         from = { lat: loc[1], lng: loc[0] };
@@ -344,14 +339,14 @@ export default function HomeScreen() {
         return;
       }
       if (lines.length === 0) {
-        showToast("경로를 찾지 못했어요");
+        showToast(t("route.notFound"));
         return;
       }
       setRouteLines(lines);
     } catch {
       // 취소로 인한 에러는 사용자가 의도한 것이므로 알리지 않는다.
       if (!controller.signal.aborted) {
-        showToast("경로를 불러오지 못했어요");
+        showToast(t("route.loadFailed"));
       }
     } finally {
       // 취소(cancelRoute)로 이미 다른 요청이 시작됐다면 그쪽 상태를 건드리지 않는다.
@@ -443,8 +438,8 @@ export default function HomeScreen() {
         <View pointerEvents="box-none" className="px-4 pt-2">
           <Input
             size="lg"
-            placeholder="병원 또는 관광지를 검색해보세요"
-            accessibilityLabel="장소 검색"
+            placeholder={t("home.search.placeholder")}
+            accessibilityLabel={t("home.search.label")}
             value={search}
             onChangeText={handleChange}
             returnKeyType="search"
@@ -453,7 +448,7 @@ export default function HomeScreen() {
             rightIcon={
               search ? (
                 <Pressable
-                  accessibilityLabel="검색어 지우기"
+                  accessibilityLabel={t("home.search.clear")}
                   onPress={clearSearch}
                 >
                   <X size={18} color={colors["text-muted"]} />
@@ -489,7 +484,9 @@ export default function HomeScreen() {
                 ) : (
                   <View className="px-4 py-3">
                     <Text className="text-body-sm text-text-muted">
-                      {isFetching ? "검색 중…" : "검색 결과가 없습니다."}
+                      {isFetching
+                        ? t("home.search.loading")
+                        : t("home.search.empty")}
                     </Text>
                   </View>
                 )}
@@ -506,10 +503,18 @@ export default function HomeScreen() {
         <TagList
           value={filter}
           onChange={selectFilter}
-          aria-label="지도 필터"
+          aria-label={t("home.map.filters")}
           className="px-4 pb-4"
         >
-          {CATEGORY_ITEMS.map((item) => (
+          {[
+            { value: FILTER_ALL, name: t("home.filter.all") },
+            { value: "hospital", name: t("home.filter.hospital") },
+            { value: "attraction", name: t("home.filter.attraction") },
+            {
+              value: "accommodation",
+              name: t("home.filter.accommodation"),
+            },
+          ].map((item) => (
             <TagList.Item
               key={item.value}
               value={item.value}
@@ -543,7 +548,7 @@ export default function HomeScreen() {
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="여행 계획 짜기"
+        accessibilityLabel={t("home.plan.open")}
         onPress={openPlan}
         className="absolute right-5 bottom-24 size-14 items-center justify-center rounded-full bg-primary shadow-md active:bg-action-primary-hover"
       >
@@ -592,7 +597,7 @@ export default function HomeScreen() {
               </View>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="상세 닫기"
+                accessibilityLabel={t("home.detail.close")}
                 onPress={closeDetail}
                 hitSlop={8}
                 className="self-start"
@@ -604,13 +609,13 @@ export default function HomeScreen() {
             {/* 경로 안내: 시작지·도착지를 정하는 설정 패널을 연다. */}
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="경로 안내"
+              accessibilityLabel={t("route.guide")}
               onPress={openRoutePlan}
               className="mx-5 mt-1 mb-2 h-11 flex-row items-center justify-center gap-2 rounded-[8px] bg-primary active:bg-action-primary-hover"
             >
               <Navigation size={16} color={colors["on-action-primary"]} />
               <Text className="text-label-lg text-on-action-primary">
-                경로 안내
+                {t("route.guide")}
               </Text>
             </Pressable>
           </SafeAreaView>
@@ -628,27 +633,31 @@ export default function HomeScreen() {
             <View className="flex-row items-center gap-2 px-5 pt-4 pb-1">
               <MapPin size={16} color={colors.primary} />
               <Text className="flex-1 text-body-md text-text">
-                {picking === "start" ? "시작지" : "도착지"}를 지도 중앙에 맞춰
-                주세요
+                {t("route.pickPrompt", {
+                  point:
+                    picking === "start" ? t("route.start") : t("route.end"),
+                })}
               </Text>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="지점 지정 취소"
+                accessibilityLabel={t("route.pickCancel")}
                 onPress={() => setPicking(null)}
                 hitSlop={8}
               >
-                <Text className="text-label-lg text-text-muted">취소</Text>
+                <Text className="text-label-lg text-text-muted">
+                  {t("common.cancel")}
+                </Text>
               </Pressable>
             </View>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="이 위치로 지정"
+              accessibilityLabel={t("route.confirmLocation")}
               onPress={() => void confirmPick()}
               className="mx-5 mt-2 mb-2 h-11 flex-row items-center justify-center gap-2 rounded-[8px] bg-primary active:bg-action-primary-hover"
             >
               <Crosshair size={16} color={colors["on-action-primary"]} />
               <Text className="text-label-lg text-on-action-primary">
-                이 위치로 지정
+                {t("route.confirmLocation")}
               </Text>
             </Pressable>
           </SafeAreaView>
@@ -664,11 +673,11 @@ export default function HomeScreen() {
           >
             <View className="flex-row items-center gap-2 px-5 pt-4 pb-1">
               <Text className="flex-1 text-heading-sm text-text">
-                경로 설정
+                {t("route.settings")}
               </Text>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="경로 설정 닫기"
+                accessibilityLabel={t("route.closeSettings")}
                 onPress={closeRoutePlan}
                 hitSlop={8}
               >
@@ -678,7 +687,9 @@ export default function HomeScreen() {
 
             {/* 시작지: 현위치 / 지도에서 선택 (택1) */}
             <View className="px-5 pt-2">
-              <Text className="mb-1 text-label-sm text-text-muted">시작지</Text>
+              <Text className="mb-1 text-label-sm text-text-muted">
+                {t("route.start")}
+              </Text>
               <View className="flex-row gap-2">
                 <Pressable
                   accessibilityRole="button"
@@ -709,7 +720,7 @@ export default function HomeScreen() {
                           : colors.text,
                     }}
                   >
-                    현위치
+                    {t("route.currentLocation")}
                   </Text>
                 </Pressable>
                 <Pressable
@@ -741,7 +752,7 @@ export default function HomeScreen() {
                           : colors.text,
                     }}
                   >
-                    지도에서 선택
+                    {t("route.selectOnMap")}
                   </Text>
                 </Pressable>
               </View>
@@ -749,7 +760,9 @@ export default function HomeScreen() {
 
             {/* 도착지: 클릭한 장소가 기본, 지도에서 변경 가능 */}
             <View className="px-5 pt-3">
-              <Text className="mb-1 text-label-sm text-text-muted">도착지</Text>
+              <Text className="mb-1 text-label-sm text-text-muted">
+                {t("route.end")}
+              </Text>
               <View className="flex-row items-center gap-2">
                 <View className="flex-1 flex-row items-center gap-1.5">
                   <Flag size={15} color={colors.text} />
@@ -757,17 +770,19 @@ export default function HomeScreen() {
                     numberOfLines={1}
                     className="flex-1 text-body-md text-text"
                   >
-                    {endPoint?.label ?? "지도에서 선택한 지점"}
+                    {endPoint?.label ?? t("route.mapPoint")}
                   </Text>
                 </View>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="도착지 지도에서 변경"
+                  accessibilityLabel={t("route.changeEnd")}
                   onPress={() => setPicking("end")}
                   className="h-9 flex-row items-center justify-center gap-1.5 rounded-[8px] border border-border px-3 active:bg-surface-muted"
                 >
                   <MapPin size={14} color={colors.text} />
-                  <Text className="text-label-md text-text">변경</Text>
+                  <Text className="text-label-md text-text">
+                    {t("route.change")}
+                  </Text>
                 </Pressable>
               </View>
             </View>
@@ -780,7 +795,9 @@ export default function HomeScreen() {
                     className="h-1 w-5 rounded-full"
                     style={{ backgroundColor: ROUTE_COLORS.shortest }}
                   />
-                  <Text className="text-body-sm text-text-secondary">최단</Text>
+                  <Text className="text-body-sm text-text-secondary">
+                    {t("route.shortest")}
+                  </Text>
                 </View>
                 <View className="flex-row items-center gap-1.5">
                   <View
@@ -788,7 +805,7 @@ export default function HomeScreen() {
                     style={{ backgroundColor: ROUTE_COLORS.shady }}
                   />
                   <Text className="text-body-sm text-text-secondary">
-                    그늘길
+                    {t("route.shady")}
                   </Text>
                 </View>
               </View>
@@ -798,7 +815,7 @@ export default function HomeScreen() {
                 disabled 색+스피너. 조건부 배경색은 style로 처리해 css-interop 크래시 회피. */}
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="경로 찾기"
+              accessibilityLabel={t("route.find")}
               accessibilityState={{ disabled: routing, busy: routing }}
               disabled={routing}
               onPress={confirmRoute}
@@ -826,10 +843,10 @@ export default function HomeScreen() {
                 }}
               >
                 {routing
-                  ? "경로 찾는 중…"
+                  ? t("route.finding")
                   : routeLines.length > 0
-                    ? "경로 다시 찾기"
-                    : "경로 찾기"}
+                    ? t("route.findAgain")
+                    : t("route.find")}
               </Text>
             </Pressable>
           </SafeAreaView>

@@ -4,6 +4,7 @@ import { Check } from "lucide-react-native";
 import { Pressable, Text, View } from "react-native";
 
 import { PlaceThumbnail } from "@/components/PlaceThumbnail";
+import { useI18n } from "@/i18n/i18n-provider";
 
 /**
  * 웹 `apps/web/src/components/PlaceCard/PlaceCard.tsx`를 RN으로 이식.
@@ -53,6 +54,7 @@ export const PlaceCard = ({
   onToggleSelect,
   className,
 }: PlaceCardProps) => {
+  const { t } = useI18n();
   const cardClass = cn(
     "w-full flex-row items-center gap-3 rounded-[12px] border-2 bg-surface p-3 shadow-sm",
     selected ? "border-primary" : "border-transparent",
@@ -89,7 +91,7 @@ export const PlaceCard = ({
         {info}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="선택 해제"
+          accessibilityLabel={t("place.deselect")}
           onPress={onToggleSelect}
           className="size-6 shrink-0 items-center justify-center rounded-full bg-primary active:opacity-80"
         >

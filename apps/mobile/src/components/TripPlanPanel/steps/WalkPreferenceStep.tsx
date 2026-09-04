@@ -4,12 +4,11 @@ import { Check } from "lucide-react-native";
 import { Pressable, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
+import type { TranslationKey } from "@/i18n/config";
+import { useI18n } from "@/i18n/i18n-provider";
+
 type WalkPreferenceIconName =
-  | "relaxed"
-  | "light"
-  | "standard"
-  | "active"
-  | "walking-tour";
+  "relaxed" | "light" | "standard" | "active" | "walking-tour";
 
 const WALK_PREFERENCE_ICON_COLOR = "#0787d0";
 const WALK_PREFERENCE_ICON_PATHS: Record<WalkPreferenceIconName, string[]> = {
@@ -74,42 +73,42 @@ function WalkPreferenceIcon({ name }: { name: WalkPreferenceIconName }) {
 export interface WalkPreferenceOption {
   /** 제출 값 (1~5) */
   value: number;
-  label: string;
+  labelKey: TranslationKey;
   icon: WalkPreferenceIconName;
-  description: string;
+  descriptionKey: TranslationKey;
 }
 
 /** 도보 선호도 선택지. value(1~5)가 곧 제출 값(user_walk_preference) */
 export const WALK_PREFERENCES: WalkPreferenceOption[] = [
   {
     value: 1,
-    label: "여유형",
+    labelKey: "plan.walk.1",
     icon: "relaxed",
-    description: "도보 10분 미만, 택시/지하철 바로 앞 명소 위주",
+    descriptionKey: "plan.walk.1Desc",
   },
   {
     value: 2,
-    label: "가벼운 활동형",
+    labelKey: "plan.walk.2",
     icon: "light",
-    description: "도보 10~30분, 가벼운 가로수길이나 쇼핑몰 산책",
+    descriptionKey: "plan.walk.2Desc",
   },
   {
     value: 3,
-    label: "표준 활동형",
+    labelKey: "plan.walk.3",
     icon: "standard",
-    description: "도보 30분 이상, 활동적인 트레킹이나 광범위 탐방",
+    descriptionKey: "plan.walk.3Desc",
   },
   {
     value: 4,
-    label: "적극 활동형",
+    labelKey: "plan.walk.4",
     icon: "active",
-    description: "도보 30분 이상, 활동적인 트레킹이나 광범위 탐방",
+    descriptionKey: "plan.walk.4Desc",
   },
   {
     value: 5,
-    label: "도보 탐방형",
+    labelKey: "plan.walk.5",
     icon: "walking-tour",
-    description: "도보 30분 이상, 활동적인 트레킹이나 광범위 탐방",
+    descriptionKey: "plan.walk.5Desc",
   },
 ];
 
@@ -123,10 +122,11 @@ export function WalkPreferenceStep({
   value,
   onChange,
 }: WalkPreferenceStepProps) {
+  const { t } = useI18n();
   return (
     <View className="gap-3 pt-2">
       <Text className="text-body-sm text-text-secondary">
-        시술 후 체력 및 회복 상태를 고려해 도보 정도를 알려주세요.
+        {t("plan.walk.prompt")}
       </Text>
 
       {WALK_PREFERENCES.map((option) => {
@@ -145,9 +145,11 @@ export function WalkPreferenceStep({
             <WalkPreferenceIcon name={option.icon} />
 
             <View className="flex-1">
-              <Text className="text-label-lg text-text">{option.label}</Text>
+              <Text className="text-label-lg text-text">
+                {t(option.labelKey)}
+              </Text>
               <Text className="text-body-sm text-text-muted">
-                {option.description}
+                {t(option.descriptionKey)}
               </Text>
             </View>
 

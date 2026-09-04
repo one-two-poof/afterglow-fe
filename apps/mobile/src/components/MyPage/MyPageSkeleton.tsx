@@ -1,9 +1,11 @@
 import { View } from "react-native";
+import { useI18n } from "@/i18n/i18n-provider";
 
 /** 인증 확인 / 내 정보 로딩 중 스켈레톤. animate-pulse 대신 정적 회색 박스. */
 export function MyPageSkeleton() {
+  const { t } = useI18n();
   return (
-    <View accessibilityLabel="내 정보 불러오는 중">
+    <View accessibilityLabel={t("profile.loading")}>
       <View className="flex-row items-center gap-4 bg-surface px-5 py-6">
         <View className="size-20 rounded-full bg-surface-muted" />
         <View className="flex-1 gap-2">

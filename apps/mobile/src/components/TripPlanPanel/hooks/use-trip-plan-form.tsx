@@ -2,6 +2,7 @@ import { addDays, formatISODate, type DateRange } from "@afterglow/utils";
 import { type ReactNode, useCallback, useState } from "react";
 
 import { type Place } from "@/types/place";
+import { useI18n } from "@/i18n/i18n-provider";
 
 import { buildTripPlanPayload } from "../payload";
 import { PlaceStep } from "../steps/PlaceStep";
@@ -44,6 +45,7 @@ export interface TripPlanForm {
  * 같은 prop 시그니처로 채운다(훅은 그대로 유지).
  */
 export const useTripPlanForm = (): TripPlanForm => {
+  const { t } = useI18n();
   const [range, setRange] = useState<DateRange>({ start: null, end: null });
   // 선택한 시술 종류(한글)
   const [treatments, setTreatments] = useState<string[]>([]);
@@ -98,19 +100,19 @@ export const useTripPlanForm = (): TripPlanForm => {
 
   const steps: FormStep[] = [
     {
-      title: "여행 일정 선택",
+      title: t("plan.title.schedule"),
       canNext: Boolean(range.start && range.end),
       content: <ScheduleStep value={range} onChange={setRange} />,
     },
     {
-      title: "시술 종류 선택",
+      title: t("plan.title.treatment"),
       canNext: treatments.length > 0,
       content: (
         <TreatmentStep selected={treatments} onToggle={toggleTreatment} />
       ),
     },
     {
-      title: "시술 날짜 선택",
+      title: t("plan.title.treatmentDate"),
       canNext: allTreatmentsDated,
       content: (
         <TreatmentDateStep
@@ -124,7 +126,7 @@ export const useTripPlanForm = (): TripPlanForm => {
     ...(dayCount > 0
       ? [
           {
-            title: "관광지 선택",
+            title: t("plan.title.place"),
             // 모든 날짜에 장소가 채워져야 다음으로
             canNext: Array.from({ length: dayCount }).every((_, i) =>
               Boolean(selectedPlaces[i]),
@@ -140,12 +142,12 @@ export const useTripPlanForm = (): TripPlanForm => {
         ]
       : []),
     {
-      title: "여행 주요 목적 선택",
+      title: t("plan.title.purpose"),
       canNext: Boolean(purpose),
       content: <PurposeStep value={purpose} onChange={setPurpose} />,
     },
     {
-      title: "도보 선호도 선택",
+      title: t("plan.title.walk"),
       canNext: walkPreference !== null,
       content: (
         <WalkPreferenceStep

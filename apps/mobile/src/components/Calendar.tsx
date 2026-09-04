@@ -1,19 +1,19 @@
 import {
   addMonths,
   cn,
-  formatMonthTitle,
   getMonthMatrix,
   isBeforeDay,
   isInRange,
   isSameDay,
   nextRange,
   startOfMonth,
-  WEEKDAYS_KO,
   type DateRange,
 } from "@afterglow/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
+
+import { useI18n } from "@/i18n/i18n-provider";
 
 /**
  * 웹 `@afterglow/ui` Calendar의 RN 이식본.
@@ -51,6 +51,7 @@ export const Calendar = ({
   minimumDate,
   className,
 }: CalendarProps) => {
+  const { locale, t } = useI18n();
   const [month, setMonth] = useState(() =>
     startOfMonth(defaultMonth ?? value.start ?? new Date()),
   );
@@ -58,8 +59,7 @@ export const Calendar = ({
   const weeks = getMonthMatrix(month.getFullYear(), month.getMonth());
   const hasRange = Boolean(value.start && value.end);
   const isPreviousMonthDisabled = Boolean(
-    minimumDate &&
-      !isBeforeDay(startOfMonth(minimumDate), month),
+    minimumDate && !isBeforeDay(startOfMonth(minimumDate), month),
   );
 
   return (
@@ -68,7 +68,7 @@ export const Calendar = ({
       <View className="mb-3 flex-row items-center justify-between">
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="이전 달"
+          accessibilityLabel={t("calendar.previousMonth")}
           accessibilityState={{ disabled: isPreviousMonthDisabled }}
           disabled={isPreviousMonthDisabled}
           onPress={() => setMonth((m) => addMonths(m, -1))}
@@ -77,11 +77,14 @@ export const Calendar = ({
           <ChevronLeft size={20} color="#6b7280" />
         </Pressable>
         <Text className="text-heading-sm text-text">
-          {formatMonthTitle(month)}
+          {new Intl.DateTimeFormat(locale, {
+            year: "numeric",
+            month: "long",
+          }).format(month)}
         </Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="다음 달"
+          accessibilityLabel={t("calendar.nextMonth")}
           onPress={() => setMonth((m) => addMonths(m, 1))}
           className="rounded-full p-1 active:bg-surface-muted"
         >
@@ -91,7 +94,11 @@ export const Calendar = ({
 
       {/* 요일 헤더 (일=error, 토=primary) */}
       <View className="flex-row">
-        {WEEKDAYS_KO.map((weekday, i) => (
+        {Array.from({ length: 7 }, (_, i) =>
+          new Intl.DateTimeFormat(locale, { weekday: "narrow" }).format(
+            new Date(2024, 0, 7 + i),
+          ),
+        ).map((weekday, i) => (
           <Text
             key={weekday}
             className={cn(
@@ -109,7 +116,7 @@ export const Calendar = ({
       </View>
 
       {/* 날짜 그리드: 주 = flex-row, 셀 = flex-1 */}
-      <View accessibilityLabel="날짜 선택">
+      <View accessibilityLabel={t("calendar.selectDate")}>
         {weeks.map((week, wi) => (
           <View key={wi} className="flex-row">
             {week.map((day, di) =>
@@ -119,8 +126,11 @@ export const Calendar = ({
                   day={day}
                   range={value}
                   hasRange={hasRange}
+                  locale={locale}
                   startLabel={startLabel}
-                  disabled={Boolean(minimumDate && isBeforeDay(day, minimumDate))}
+                  disabled={Boolean(
+                    minimumDate && isBeforeDay(day, minimumDate),
+                  )}
                   onSelect={() => onChange(nextRange(value, day, maxDays))}
                 />
               ) : (
@@ -138,6 +148,7 @@ interface DayCellProps {
   day: Date;
   range: DateRange;
   hasRange: boolean;
+  locale: string;
   startLabel?: string;
   disabled: boolean;
   onSelect: () => void;
@@ -147,6 +158,7 @@ const DayCell = ({
   day,
   range,
   hasRange,
+  locale,
   startLabel,
   disabled,
   onSelect,
@@ -166,9 +178,9 @@ const DayCell = ({
         ? "text-primary"
         : "text-text";
 
-  const accessibilityLabel = `${day.getFullYear()}년 ${day.getMonth() + 1}월 ${day.getDate()}일 ${WEEKDAYS_KO[weekday]}요일${
-    isStart && startLabel ? `, ${startLabel}` : ""
-  }`;
+  const accessibilityLabel = `${new Intl.DateTimeFormat(locale, {
+    dateStyle: "full",
+  }).format(day)}${isStart && startLabel ? `, ${startLabel}` : ""}`;
 
   const showBar = hasRange && !isSingle && (inMiddle || isEndpoint);
 

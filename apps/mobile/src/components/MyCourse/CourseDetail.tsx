@@ -5,6 +5,7 @@ import { ScrollView, Text, View } from "react-native";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { useAccessToken } from "@/hooks/use-access-token";
 import { useRecommendations } from "@/hooks/use-recommendations";
+import { useI18n } from "@/i18n/i18n-provider";
 import { courseTitle } from "@/types/recommendation";
 
 import { CourseItinerary } from "./CourseItinerary";
@@ -12,19 +13,22 @@ import { MyCourseSkeleton } from "./MyCourseSkeleton";
 
 /** 코스를 찾지 못했을 때(캐시 없음/삭제됨 등)의 안내 화면. */
 function NotFound() {
+  const { t } = useI18n();
   const router = useRouter();
   return (
     <View className="flex-1 bg-bg">
-      <ScreenHeader title="코스 상세" />
+      <ScreenHeader title={t("course.detail")} />
       <View className="flex-1 items-center justify-center gap-4 px-6">
         <View className="items-center gap-2">
-          <Text className="text-heading-sm text-text">코스를 찾을 수 없어요</Text>
+          <Text className="text-heading-sm text-text">
+            {t("course.notFound")}
+          </Text>
           <Text className="text-center text-body-sm text-text-muted">
-            목록에서 다시 선택해 주세요.
+            {t("course.notFoundHint")}
           </Text>
         </View>
         <Button variant="secondary" size="md" onPress={() => router.back()}>
-          목록으로
+          {t("course.backToList")}
         </Button>
       </View>
     </View>
@@ -36,6 +40,7 @@ function NotFound() {
  * 데이터는 목록 화면에서 이미 채워진 useRecommendations 캐시에서 selectionId로 찾는다.
  */
 export function CourseDetail({ selectionId }: { selectionId: number }) {
+  const { t } = useI18n();
   const token = useAccessToken();
   const isAuthed = typeof token === "string";
   const { data: courses = [], isLoading } = useRecommendations(isAuthed);
@@ -45,7 +50,7 @@ export function CourseDetail({ selectionId }: { selectionId: number }) {
   if (token === undefined || (isAuthed && isLoading && !course)) {
     return (
       <View className="flex-1 bg-bg">
-        <ScreenHeader title="코스 상세" />
+        <ScreenHeader title={t("course.detail")} />
         <MyCourseSkeleton />
       </View>
     );
