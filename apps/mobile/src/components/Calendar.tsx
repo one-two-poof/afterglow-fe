@@ -3,6 +3,7 @@ import {
   cn,
   formatMonthTitle,
   getMonthMatrix,
+  isBeforeDay,
   isInRange,
   isSameDay,
   nextRange,
@@ -37,6 +38,7 @@ export interface CalendarProps {
   maxDays?: number;
   startLabel?: string;
   defaultMonth?: Date;
+  minimumDate?: Date;
   className?: string;
 }
 
@@ -46,6 +48,7 @@ export const Calendar = ({
   maxDays = 4,
   startLabel,
   defaultMonth,
+  minimumDate,
   className,
 }: CalendarProps) => {
   const [month, setMonth] = useState(() =>
@@ -54,6 +57,10 @@ export const Calendar = ({
 
   const weeks = getMonthMatrix(month.getFullYear(), month.getMonth());
   const hasRange = Boolean(value.start && value.end);
+  const isPreviousMonthDisabled = Boolean(
+    minimumDate &&
+      !isBeforeDay(startOfMonth(minimumDate), month),
+  );
 
   return (
     <View className={cn("rounded-[20px] bg-surface p-5", className)}>
@@ -62,8 +69,10 @@ export const Calendar = ({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="이전 달"
+          accessibilityState={{ disabled: isPreviousMonthDisabled }}
+          disabled={isPreviousMonthDisabled}
           onPress={() => setMonth((m) => addMonths(m, -1))}
-          className="rounded-full p-1 active:bg-surface-muted"
+          className="rounded-full p-1 active:bg-surface-muted disabled:opacity-30"
         >
           <ChevronLeft size={20} color="#6b7280" />
         </Pressable>
@@ -111,6 +120,7 @@ export const Calendar = ({
                   range={value}
                   hasRange={hasRange}
                   startLabel={startLabel}
+                  disabled={Boolean(minimumDate && isBeforeDay(day, minimumDate))}
                   onSelect={() => onChange(nextRange(value, day, maxDays))}
                 />
               ) : (
@@ -129,6 +139,7 @@ interface DayCellProps {
   range: DateRange;
   hasRange: boolean;
   startLabel?: string;
+  disabled: boolean;
   onSelect: () => void;
 }
 
@@ -137,6 +148,7 @@ const DayCell = ({
   range,
   hasRange,
   startLabel,
+  disabled,
   onSelect,
 }: DayCellProps) => {
   const isStart = Boolean(range.start && isSameDay(day, range.start));
@@ -173,8 +185,12 @@ const DayCell = ({
     <View accessibilityRole="button" className="flex-1">
       <Pressable
         onPress={onSelect}
+        disabled={disabled}
         accessibilityLabel={accessibilityLabel}
-        accessibilityState={{ selected: isEndpoint || inMiddle }}
+        accessibilityState={{
+          disabled,
+          selected: isEndpoint || inMiddle,
+        }}
         className="relative h-11 w-full items-center justify-center rounded-full"
       >
         {showBar && (
@@ -204,7 +220,11 @@ const DayCell = ({
           <Text
             className={cn(
               "z-10 text-body-md",
-              inMiddle ? "text-primary-700" : baseColor,
+              disabled
+                ? "text-text-disabled"
+                : inMiddle
+                  ? "text-primary-700"
+                  : baseColor,
             )}
           >
             {day.getDate()}

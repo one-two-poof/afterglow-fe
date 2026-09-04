@@ -24,7 +24,12 @@ export function ScheduleStep({ value, onChange }: ScheduleStepProps) {
       </View>
 
       <TripSummaryCard range={value} />
-      <Calendar value={value} onChange={onChange} startLabel="시작일" />
+      <Calendar
+        value={value}
+        onChange={onChange}
+        startLabel="시작일"
+        minimumDate={new Date()}
+      />
     </View>
   );
 }

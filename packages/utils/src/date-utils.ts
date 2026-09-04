@@ -32,6 +32,9 @@ export const isSameDay = (a: Date, b: Date): boolean =>
   a.getMonth() === b.getMonth() &&
   a.getDate() === b.getDate();
 
+export const isBeforeDay = (date: Date, minimumDate: Date): boolean =>
+  startOfDay(date).getTime() < startOfDay(minimumDate).getTime();
+
 export const diffInDays = (a: Date, b: Date): number =>
   Math.round((startOfDay(b).getTime() - startOfDay(a).getTime()) / MS_PER_DAY);
 
