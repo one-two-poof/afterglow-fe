@@ -2,6 +2,7 @@
  * 장소(숙소·병원 등) 목록 API 클라이언트. 웹 lib/places의 앱 버전.
  * 인증 헤더 첨부·에러 정규화는 apiClient 인터셉터(lib/axios, PR 2)가 담당한다.
  */
+import type { MapBounds } from "@/components/MapLibreMap/types";
 import { apiClient } from "@/lib/axios";
 import type { Place } from "@/types/place";
 
@@ -45,25 +46,33 @@ export async function fetchPlaces(name?: string): Promise<Place[]> {
 /** 지도 카테고리 필터 종류 (웹 lib/places와 동일). */
 export type PlaceCategory = "hospital" | "accommodation" | "attraction";
 
-/** 카테고리별 장소 조회. name 생략 시 해당 카테고리 전체. */
+/**
+ * 카테고리별 장소 조회. name 생략 시 해당 카테고리 전체.
+ * bounds를 주면 지도 뷰포트(swLat/neLat/swLng/neLng)로 결과를 제한한다.
+ * (넷 다 함께 보내야 하며, 생략 시 전체 반환 — 백엔드 계약)
+ */
 const fetchPlacesByCategory = async (
   category: PlaceCategory,
   name?: string,
+  bounds?: MapBounds,
 ): Promise<Place[]> => {
   const { data } = await apiClient.get<Place[]>(`/api/places/${category}`, {
-    params: name ? { name } : undefined,
+    params: {
+      ...(name ? { name } : {}),
+      ...(bounds ?? {}),
+    },
   });
   return sanitize(data);
 };
 
-/** 병원 목록 (name 생략 시 전체) */
-export const fetchHospitals = (name?: string) =>
-  fetchPlacesByCategory("hospital", name);
+/** 병원 목록 (name 생략 시 전체, bounds 주면 뷰포트로 제한) */
+export const fetchHospitals = (name?: string, bounds?: MapBounds) =>
+  fetchPlacesByCategory("hospital", name, bounds);
 
-/** 숙소 목록 (name 생략 시 전체) */
-export const fetchAccommodations = (name?: string) =>
-  fetchPlacesByCategory("accommodation", name);
+/** 숙소 목록 (name 생략 시 전체, bounds 주면 뷰포트로 제한) */
+export const fetchAccommodations = (name?: string, bounds?: MapBounds) =>
+  fetchPlacesByCategory("accommodation", name, bounds);
 
-/** 관광명소 목록 (name 생략 시 전체) */
-export const fetchAttractions = (name?: string) =>
-  fetchPlacesByCategory("attraction", name);
+/** 관광명소 목록 (name 생략 시 전체, bounds 주면 뷰포트로 제한) */
+export const fetchAttractions = (name?: string, bounds?: MapBounds) =>
+  fetchPlacesByCategory("attraction", name, bounds);

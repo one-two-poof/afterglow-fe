@@ -22,10 +22,15 @@ import {
   Text,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import { MapLibreMap } from "@/components/MapLibreMap";
+import { TopScrim } from "@/components/TopScrim";
 import {
+  type MapBounds,
   type MapLibreMapRef,
   type MapMarker,
   type MarkerDetail,
@@ -86,6 +91,7 @@ const placeToDetail = (place: Place): MarkerDetail => ({
  */
 export default function HomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const showToast = useToastStore((s) => s.show);
   const [planOpen, setPlanOpen] = useState(false);
   // 추천 코스에서 탭한 장소의 마커(지도에 찍고 카메라 이동 + 상세 카드 표시).
@@ -102,6 +108,8 @@ export default function HomeScreen() {
   const [filter, setFilter] = useState(FILTER_ALL);
   // 마커 클릭 시 하단에 띄울 상세. 마커 셋을 바꾸는 동작(검색/코스/카테고리 전환)에서 닫는다.
   const [detail, setDetail] = useState<MapMarker | null>(null);
+  // 현재 지도 뷰포트 경계. 지도 이동이 끝날 때마다 갱신되어 카테고리 장소를 그 영역으로 조회한다.
+  const [viewport, setViewport] = useState<MapBounds | null>(null);
   // 경로 안내로 그린 경로(최단·그늘). 상세/마커가 바뀌면 지운다.
   const [routeLines, setRouteLines] = useState<RouteLine[]>([]);
   const [routing, setRouting] = useState(false);
@@ -152,12 +160,12 @@ export default function HomeScreen() {
     (course) => String(course.selectionId) === filter,
   );
 
-  // 카테고리 태그(병원/관광명소/숙소) 선택 시 그 카테고리 전체를 조회.
-  // "전체"·코스 선택 시엔 null이라 요청하지 않는다.
+  // 카테고리 태그(병원/관광명소/숙소) 선택 시 현재 뷰포트의 장소를 조회.
+  // "전체"·코스 선택 시엔 null이라 요청하지 않는다. 뷰포트가 바뀌면 그 영역으로 재조회.
   const category = (PLACE_CATEGORIES as string[]).includes(filter)
     ? (filter as PlaceCategory)
     : null;
-  const { data: categoryPlaces = [] } = useCategoryPlaces(category);
+  const { data: categoryPlaces = [] } = useCategoryPlaces(category, viewport);
 
   const showResults = searchOpen && search.trim() !== "";
 
@@ -397,9 +405,16 @@ export default function HomeScreen() {
         ref={mapRef}
         markers={markers}
         onMarkerPress={setDetail}
+        onRegionChange={setViewport}
+        // 카테고리는 뷰포트 기반 조회라 카메라 자동 이동 OFF(재조회 루프 방지).
+        // 검색/코스/코스장소 마커는 해당 지점으로 이동해야 하므로 ON.
+        autoFitMarkers={category === null}
         routeLines={routeLines}
         routePins={routePins}
       />
+
+      {/* 상태바(시계·배터리 등) 가독성용 상단 스크림. 지도는 풀블리드 유지. */}
+      <TopScrim height={insets.top + 12} />
 
       {/* 지점 지정 중: 지도 중앙 고정 십자선. 지도를 움직여 원하는 곳에 맞춘다.
           touch를 막지 않도록 pointerEvents=none. */}
