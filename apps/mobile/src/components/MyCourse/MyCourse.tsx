@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { LoginPrompt } from "@/components/MyPage/LoginPrompt";
 import { useAccessToken } from "@/hooks/use-access-token";
 import { useRecommendations } from "@/hooks/use-recommendations";
 import { clearAccessToken, UnauthorizedError } from "@/lib/auth";
@@ -40,7 +41,11 @@ export function MyCourse() {
     return <MyCourseSkeleton />;
   }
   if (token === null) {
-    return <LoginNeeded />;
+    return (
+      <SafeAreaView edges={["top"]} className="flex-1 bg-bg">
+        <LoginPrompt />
+      </SafeAreaView>
+    );
   }
   if (isLoading) {
     return <MyCourseSkeleton />;
@@ -85,20 +90,6 @@ export function MyCourse() {
           ))
         )}
       </ScrollView>
-    </SafeAreaView>
-  );
-}
-
-/** 미로그인 안내. TODO(PR 19): MyPage의 LoginPrompt로 교체. */
-function LoginNeeded() {
-  return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-bg">
-      <View className="flex-1 items-center justify-center gap-2 px-6">
-        <Text className="text-heading-sm text-text">로그인이 필요해요</Text>
-        <Text className="text-center text-body-sm text-text-muted">
-          로그인하면 저장한 코스를 볼 수 있어요. (로그인은 PR 18)
-        </Text>
-      </View>
     </SafeAreaView>
   );
 }
