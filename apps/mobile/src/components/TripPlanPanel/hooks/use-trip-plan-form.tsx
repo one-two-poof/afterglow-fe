@@ -170,7 +170,11 @@ export const useTripPlanForm = (): TripPlanForm => {
     buildTripPlanPayload(
       range,
       // 여행 일수만큼만 (기간 축소 시 남은 이전 선택 제외)
-      selectedPlaces.slice(0, dayCount).map((place) => place?.id ?? null),
+      selectedPlaces
+        .slice(0, dayCount)
+        .map((place) =>
+          place ? { id: place.id, place_type: place.placeType } : null,
+        ),
       treatments,
       treatmentDates,
       purpose ?? "",

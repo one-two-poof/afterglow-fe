@@ -8,7 +8,7 @@ import type { TripPlanPayload } from "./types";
  */
 export const buildTripPlanPayload = (
   range: DateRange,
-  placeIds: (number | null)[],
+  starts: ({ id: number; place_type: string } | null)[],
   treatments: string[],
   treatmentDates: Record<string, string>,
   userPurpose: string,
@@ -20,13 +20,14 @@ export const buildTripPlanPayload = (
   }
 
   const daily_startList: TripPlanPayload["daily_startList"] = [];
-  placeIds.forEach((id, i) => {
-    if (id === null) {
+  starts.forEach((s, i) => {
+    if (s === null) {
       return;
     }
     daily_startList.push({
       date: formatISODate(addDays(start, i)),
-      start_id: id,
+      start_id: s.id,
+      place_type: s.place_type,
     });
   });
 
