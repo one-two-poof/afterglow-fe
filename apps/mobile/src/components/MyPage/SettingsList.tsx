@@ -12,6 +12,7 @@ interface SettingsItem {
   href?: Href;
   onPress?: () => void;
   destructive?: boolean;
+  disabled?: boolean;
 }
 
 // 라우트가 아직 없는 항목(언어 설정)은 href/onPress 미지정 placeholder — 연결되면 채운다.
@@ -45,11 +46,13 @@ function SettingsRow({ item, isLast }: { item: SettingsItem; isLast: boolean }) 
   return (
     <Pressable
       accessibilityRole="button"
-      disabled={!handlePress}
+      accessibilityState={{ disabled: item.disabled || !handlePress }}
+      disabled={item.disabled || !handlePress}
       onPress={handlePress}
       className={cn(
         "flex-row items-center gap-3 px-5 py-4 active:bg-surface-muted",
         !isLast && "border-b border-border",
+        item.disabled && "opacity-50",
       )}
     >
       <View className="flex-1">
@@ -87,8 +90,16 @@ function Group({ items }: { items: SettingsItem[] }) {
   );
 }
 
-/** 설정 목록 + 로그아웃. 웹 SettingsList의 RN 버전. */
-export function SettingsList({ onLogout }: { onLogout: () => void }) {
+/** 설정 목록 + 로그아웃/회원 탈퇴. 웹 SettingsList의 RN 버전. */
+export function SettingsList({
+  onLogout,
+  onDeleteAccount,
+  isDeletingAccount,
+}: {
+  onLogout: () => void;
+  onDeleteAccount: () => void;
+  isDeletingAccount: boolean;
+}) {
   return (
     <View className="gap-2 bg-bg pb-8">
       {MENU_GROUPS.map((group, i) => (
@@ -102,6 +113,16 @@ export function SettingsList({ onLogout }: { onLogout: () => void }) {
             description: "안전하게 계정 연결 해제",
             onPress: onLogout,
             destructive: true,
+          },
+          {
+            key: "delete-account",
+            title: "회원 탈퇴",
+            description: isDeletingAccount
+              ? "계정을 삭제하고 있어요"
+              : "계정과 저장된 데이터를 영구 삭제",
+            onPress: onDeleteAccount,
+            destructive: true,
+            disabled: isDeletingAccount,
           },
         ]}
       />

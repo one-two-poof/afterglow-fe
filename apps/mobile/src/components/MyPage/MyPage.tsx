@@ -1,12 +1,14 @@
+import { useToastStore } from "@afterglow/stores";
 import { Button } from "@afterglow/ui-native";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { Alert, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAccessToken } from "@/hooks/use-access-token";
 import { useMe } from "@/hooks/use-me";
 import { clearAccessToken, UnauthorizedError } from "@/lib/auth";
+import { deleteMe } from "@/lib/me";
 
 import { LoginPrompt } from "./LoginPrompt";
 import { MyPageSkeleton } from "./MyPageSkeleton";
@@ -22,6 +24,7 @@ import { SettingsList } from "./SettingsList";
  */
 export function MyPage() {
   const queryClient = useQueryClient();
+  const showToast = useToastStore((state) => state.show);
   const token = useAccessToken();
   const isAuthed = typeof token === "string";
 
@@ -36,6 +39,39 @@ export function MyPage() {
   const handleLogout = () => {
     clearAccessToken();
     queryClient.removeQueries({ queryKey: ["me"] });
+  };
+
+  const deleteAccountMutation = useMutation({
+    mutationFn: deleteMe,
+    onSuccess: () => {
+      clearAccessToken();
+      showToast("계정이 삭제됐어요.");
+    },
+    onError: (mutationError) => {
+      if (mutationError instanceof UnauthorizedError) {
+        clearAccessToken();
+        showToast("로그인이 만료됐어요. 다시 로그인해주세요.");
+        return;
+      }
+      showToast("회원 탈퇴에 실패했어요. 잠시 후 다시 시도해주세요.");
+    },
+  });
+
+  const handleDeleteAccount = () => {
+    if (deleteAccountMutation.isPending) return;
+
+    Alert.alert(
+      "회원 탈퇴",
+      "계정과 저장한 코스 등 관련 데이터가 영구 삭제되며 복구할 수 없어요. 정말 탈퇴할까요?",
+      [
+        { text: "취소", style: "cancel" },
+        {
+          text: "탈퇴",
+          style: "destructive",
+          onPress: () => deleteAccountMutation.mutate(),
+        },
+      ],
+    );
   };
 
   if (token === undefined) {
@@ -85,7 +121,11 @@ export function MyPage() {
     <SafeAreaView edges={["top"]} className="flex-1 bg-bg">
       <ScrollView>
         <ProfileHeader user={data} />
-        <SettingsList onLogout={handleLogout} />
+        <SettingsList
+          onLogout={handleLogout}
+          onDeleteAccount={handleDeleteAccount}
+          isDeletingAccount={deleteAccountMutation.isPending}
+        />
       </ScrollView>
     </SafeAreaView>
   );
