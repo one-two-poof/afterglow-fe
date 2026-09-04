@@ -119,6 +119,8 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
 
   // 결과 단계: 건너뛰기 → 다음 rank
   const handleSkip = () => setRankIndex((prev) => prev + 1);
+  // 결과 단계: 이전 → 앞서 건너뛴 rank로 되돌아간다(0에서 멈춤).
+  const handlePrev = () => setRankIndex((prev) => Math.max(0, prev - 1));
 
   return (
     <Modal
@@ -143,20 +145,17 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
         >
           <SafeAreaView edges={["bottom"]} className="flex-1">
               <View className="flex-row items-center gap-2 px-4 py-3">
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    phase === "result"
-                      ? "이전으로"
-                      : isFirst
-                        ? "홈으로 닫기"
-                        : "이전 단계"
-                  }
-                  onPress={handleBack}
-                  className="-ml-1 rounded-full p-1 active:bg-surface-muted"
-                >
-                  <ArrowLeft size={22} />
-                </Pressable>
+                {/* 추천 코스(결과) 화면에서는 뒤로가기 화살표를 숨긴다. */}
+                {phase === "result" ? null : (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={isFirst ? "홈으로 닫기" : "이전 단계"}
+                    onPress={handleBack}
+                    className="-ml-1 rounded-full p-1 active:bg-surface-muted"
+                  >
+                    <ArrowLeft size={22} />
+                  </Pressable>
+                )}
                 <Text className="text-heading-sm text-text">
                   {phase === "result" ? "추천 코스" : current.title}
                 </Text>
@@ -200,33 +199,65 @@ export const TripPlanPanel = ({ open, onClose }: TripPlanPanelProps) => {
               <View className="border-t border-border px-4 py-3">
                 {phase === "result" ? (
                   currentCourse ? (
-                    <View className="flex-row gap-2">
-                      <Button
-                        variant="secondary"
-                        size="lg"
-                        className="flex-1"
-                        onPress={handleSkip}
-                      >
-                        건너뛰기
-                      </Button>
+                    <View className="gap-2">
+                      {/* 이전/건너뛰기로 rank를 앞뒤로 브라우징. 이전은 첫 코스에서
+                          비활성. 채택은 아래 전체폭 primary로 강조. */}
+                      <View className="flex-row gap-2">
+                        <Button
+                          variant="secondary"
+                          size="lg"
+                          className="flex-1"
+                          disabled={rankIndex === 0}
+                          onPress={handlePrev}
+                        >
+                          이전
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="lg"
+                          className="flex-1"
+                          onPress={handleSkip}
+                        >
+                          건너뛰기
+                        </Button>
+                      </View>
                       <Button
                         variant="primary"
                         size="lg"
-                        className="flex-1"
+                        className="w-full"
                         onPress={handleAdopt}
                       >
                         이 코스 채택
                       </Button>
                     </View>
                   ) : (
-                    <Button
-                      variant="primary"
-                      size="lg"
-                      className="w-full"
-                      onPress={handleClose}
-                    >
-                      닫기
-                    </Button>
+                    // 모두 건너뛴 상태: 이전으로 되돌아가거나 닫는다.
+                    // 각 버튼을 flex-1 컨테이너로 감싸 영역을 정확히 반반으로 맞춘다
+                    // (Button 기본 너비 w-[320px] 영향 제거).
+                    <View className="flex-row gap-2">
+                      {rankIndex > 0 ? (
+                        <View className="flex-1">
+                          <Button
+                            variant="secondary"
+                            size="lg"
+                            className="w-full"
+                            onPress={handlePrev}
+                          >
+                            이전
+                          </Button>
+                        </View>
+                      ) : null}
+                      <View className="flex-1">
+                        <Button
+                          variant="primary"
+                          size="lg"
+                          className="w-full"
+                          onPress={handleClose}
+                        >
+                          닫기
+                        </Button>
+                      </View>
+                    </View>
                   )
                 ) : (
                   <>

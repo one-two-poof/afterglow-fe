@@ -188,8 +188,25 @@ export default function HomeScreen() {
     setSelectedPlace(place);
     // 검색 장소를 고르면 코스 선택은 해제한다(마커 대상은 하나만).
     setFilter(FILTER_ALL);
-    setDetail(null);
     resetRoutePlan();
+    // 선택한 장소의 마커 상세를 바로 띄운다(마커를 탭한 것과 동일한 카드).
+    setDetail({
+      ...toLatLng(place),
+      label: place.placeName,
+      detail: placeToDetail(place),
+    });
+  };
+
+  // 엔터(검색 확정): 결과 최상단을 선택해 마커+상세 카드를 띄운다.
+  // 아직 결과가 없으면 드롭다운을 열어 검색이 돌게 한다.
+  const submitSearch = () => {
+    if (results.length > 0) {
+      selectPlace(results[0]!);
+      return;
+    }
+    if (search.trim() !== "") {
+      setSearchOpen(true);
+    }
   };
 
   // 코스 태그 선택 시: 검색 마커를 지우고 그 코스로 전환. FILTER_ALL이면 해제.
@@ -373,6 +390,8 @@ export default function HomeScreen() {
             accessibilityLabel="장소 검색"
             value={search}
             onChangeText={handleChange}
+            returnKeyType="search"
+            onSubmitEditing={submitSearch}
             leftIcon={<Search size={18} color={colors["text-muted"]} />}
             rightIcon={
               search ? (
@@ -463,14 +482,18 @@ export default function HomeScreen() {
             edges={["bottom"]}
             className="rounded-t-[16px] bg-neutral-0 shadow-md"
           >
-            <View className="flex-row items-start gap-3 px-5 pt-4 pb-2">
+            <View className="flex-row items-center gap-3 px-5 pt-4 pb-2">
               {detail.detail.image ? (
                 <Image
                   source={{ uri: detail.detail.image }}
                   accessibilityIgnoresInvertColors
-                  className="size-16 rounded-[8px] bg-surface-muted"
+                  resizeMode="cover"
+                  className="size-16 rounded-[10px] bg-surface-muted"
                 />
-              ) : null}
+              ) : (
+                // 이미지 없으면 스켈레톤형 빈 이미지(회색 박스). 코드베이스 스켈레톤과 동일.
+                <View className="size-16 rounded-[10px] bg-surface-muted" />
+              )}
               <View className="flex-1">
                 <Text numberOfLines={1} className="text-heading-sm text-text">
                   {detail.detail.title}
@@ -497,6 +520,7 @@ export default function HomeScreen() {
                 accessibilityLabel="상세 닫기"
                 onPress={closeDetail}
                 hitSlop={8}
+                className="self-start"
               >
                 <X size={20} color={colors["text-muted"]} />
               </Pressable>
