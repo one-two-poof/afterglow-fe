@@ -1,7 +1,9 @@
 import { colors } from "@afterglow/tokens";
 import { cn } from "@afterglow/utils";
 import { Check } from "lucide-react-native";
-import { Image, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
+
+import { PlaceThumbnail } from "@/components/PlaceThumbnail";
 
 /**
  * 웹 `apps/web/src/components/PlaceCard/PlaceCard.tsx`를 RN으로 이식.
@@ -24,6 +26,10 @@ export interface PlaceCardProps {
   address: string;
   /** 카테고리 태그 (예: "피부과") */
   category?: string;
+  /** 이미지가 없을 때 표시할 기본 아이콘의 상위 장소 유형 */
+  placeType?: string;
+  /** 관광지 기본 아이콘을 고르는 세부 분류명 */
+  primaryTypeName?: string;
   imageUrl?: string;
   selected?: boolean;
   onSelect?: () => void;
@@ -39,6 +45,8 @@ export const PlaceCard = ({
   name,
   address,
   category,
+  placeType,
+  primaryTypeName,
   imageUrl,
   selected = false,
   onSelect,
@@ -51,17 +59,11 @@ export const PlaceCard = ({
     className,
   );
 
-  const thumb = imageUrl ? (
-    <Image
-      source={{ uri: imageUrl }}
-      resizeMode="cover"
-      className="size-16 shrink-0 rounded-[10px]"
-    />
-  ) : (
-    <View
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
-      className="size-16 shrink-0 rounded-[10px] bg-surface-muted"
+  const thumb = (
+    <PlaceThumbnail
+      imageUrl={imageUrl}
+      placeType={placeType}
+      primaryTypeName={primaryTypeName}
     />
   );
 

@@ -95,6 +95,8 @@ export function PlaceStep({ days, selected, onSelect }: PlaceStepProps) {
               <PlaceCard
                 key={place.id}
                 category={place.categoryName}
+                placeType={place.placeType}
+                primaryTypeName={place.primaryTypeName}
                 name={place.placeName}
                 address={place.roadAddressName || place.addressName}
                 imageUrl={place.image}
@@ -131,6 +133,8 @@ export function PlaceStep({ days, selected, onSelect }: PlaceStepProps) {
                 // 체크 표시를 눌러 선택 해제
                 <PlaceCard
                   category={place.categoryName}
+                  placeType={place.placeType}
+                  primaryTypeName={place.primaryTypeName}
                   name={place.placeName}
                   address={place.roadAddressName || place.addressName}
                   imageUrl={place.image}

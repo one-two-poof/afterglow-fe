@@ -9,6 +9,10 @@ export interface MarkerDetail {
   description?: string;
   /** 썸네일 이미지 URL */
   image?: string;
+  /** 기본 썸네일을 고르는 상위 장소 유형 */
+  placeType?: string;
+  /** 관광지 기본 썸네일을 고르는 세부 분류명 */
+  primaryTypeName?: string;
 }
 
 /** 지도에 찍을 마커 (웹 MapMarker와 동일 개념). */
