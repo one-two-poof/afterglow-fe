@@ -1,6 +1,6 @@
 import { colors } from "@afterglow/tokens";
 import { Navigation, Phone, X } from "lucide-react-native";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Animated,
   PanResponder,
@@ -38,14 +38,12 @@ export function PlaceDetailSheet({
   const { height: windowHeight } = useWindowDimensions();
   const sheetHeight = Math.min(windowHeight * 0.58, 520);
   const collapsedOffset = Math.max(sheetHeight - COLLAPSED_CONTENT_HEIGHT, 0);
-  const translateY = useRef(
-    new Animated.Value(expanded ? 0 : collapsedOffset),
-  ).current;
-  const dragStartOffset = useRef(expanded ? 0 : collapsedOffset);
+  const [translateY] = useState(
+    () => new Animated.Value(expanded ? 0 : collapsedOffset),
+  );
 
   const moveTo = (nextExpanded: boolean) => {
     const nextOffset = nextExpanded ? 0 : collapsedOffset;
-    dragStartOffset.current = nextOffset;
     onExpandedChange(nextExpanded);
     Animated.spring(translateY, {
       toValue: nextOffset,
@@ -58,7 +56,6 @@ export function PlaceDetailSheet({
 
   useEffect(() => {
     const nextOffset = expanded ? 0 : collapsedOffset;
-    dragStartOffset.current = nextOffset;
     Animated.spring(translateY, {
       toValue: nextOffset,
       damping: 24,
@@ -75,14 +72,14 @@ export function PlaceDetailSheet({
           Math.abs(gesture.dy) > 4 &&
           Math.abs(gesture.dy) > Math.abs(gesture.dx),
         onPanResponderGrant: () => {
-          dragStartOffset.current = expanded ? 0 : collapsedOffset;
           translateY.stopAnimation();
         },
         onPanResponderMove: (_, gesture) => {
+          const dragStartOffset = expanded ? 0 : collapsedOffset;
           translateY.setValue(
             Math.min(
               collapsedOffset,
-              Math.max(0, dragStartOffset.current + gesture.dy),
+              Math.max(0, dragStartOffset + gesture.dy),
             ),
           );
         },
