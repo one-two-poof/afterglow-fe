@@ -27,7 +27,7 @@ interface PlaceDetailSheetProps {
   onRoutePress: () => void;
 }
 
-const COLLAPSED_CONTENT_HEIGHT = 188;
+const COLLAPSED_CONTENT_HEIGHT = 148;
 const DRAG_THRESHOLD = 36;
 
 export function PlaceDetailSheet({
@@ -109,6 +109,20 @@ export function PlaceDetailSheet({
     [collapsedOffset, expanded, translateY],
   );
 
+  const routeButton = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t("route.guide")}
+      onPress={onRoutePress}
+      className="mx-5 mt-1 mb-2 h-11 flex-row items-center justify-center gap-2 rounded-[8px] bg-primary active:bg-action-primary-hover"
+    >
+      <Navigation size={16} color={colors["on-action-primary"]} />
+      <Text className="text-label-lg text-on-action-primary">
+        {t("route.guide")}
+      </Text>
+    </Pressable>
+  );
+
   return (
     <Animated.View
       style={{ height: sheetHeight, transform: [{ translateY }] }}
@@ -173,42 +187,33 @@ export function PlaceDetailSheet({
         </View>
 
         {expanded ? (
-          <ScrollView
-            className="flex-1 px-5"
-            contentContainerClassName="gap-4 py-3"
-          >
-            {detail.description ? (
-              <View>
-                <Text className="text-label-sm text-text-muted">
-                  {t("home.detail.address")}
-                </Text>
-                <Text className="mt-1 text-body-md text-text">
-                  {detail.description}
-                </Text>
-              </View>
-            ) : null}
-            {detail.phone ? (
-              <View className="flex-row items-center gap-2">
-                <Phone size={18} color={colors["text-secondary"]} />
-                <Text className="text-body-md text-text">{detail.phone}</Text>
-              </View>
-            ) : null}
-          </ScrollView>
+          <>
+            <ScrollView
+              className="flex-1 px-5"
+              contentContainerClassName="gap-4 py-3"
+            >
+              {detail.description ? (
+                <View>
+                  <Text className="text-label-sm text-text-muted">
+                    {t("home.detail.address")}
+                  </Text>
+                  <Text className="mt-1 text-body-md text-text">
+                    {detail.description}
+                  </Text>
+                </View>
+              ) : null}
+              {detail.phone ? (
+                <View className="flex-row items-center gap-2">
+                  <Phone size={18} color={colors["text-secondary"]} />
+                  <Text className="text-body-md text-text">{detail.phone}</Text>
+                </View>
+              ) : null}
+            </ScrollView>
+            {routeButton}
+          </>
         ) : (
-          <View className="flex-1" />
+          routeButton
         )}
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t("route.guide")}
-          onPress={onRoutePress}
-          className="mx-5 mt-1 mb-2 h-11 flex-row items-center justify-center gap-2 rounded-[8px] bg-primary active:bg-action-primary-hover"
-        >
-          <Navigation size={16} color={colors["on-action-primary"]} />
-          <Text className="text-label-lg text-on-action-primary">
-            {t("route.guide")}
-          </Text>
-        </Pressable>
       </SafeAreaView>
     </Animated.View>
   );
