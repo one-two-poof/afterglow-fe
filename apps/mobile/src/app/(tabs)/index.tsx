@@ -28,6 +28,7 @@ import {
 
 import { MapLibreMap } from "@/components/MapLibreMap";
 import { PlaceDefaultIcon } from "@/components/PlaceDefaultIcon";
+import { PlaceDetailSheet } from "@/components/PlaceDetailSheet";
 import { PlaceThumbnail } from "@/components/PlaceThumbnail";
 import { TopScrim } from "@/components/TopScrim";
 import {
@@ -65,6 +66,8 @@ const PLACE_CATEGORIES: PlaceCategory[] = [
   "accommodation",
 ];
 
+const EMPTY_PLACES: Place[] = [];
+
 /** 경로 시작/도착 지점 좌표 */
 type LatLngPoint = { lat: number; lng: number };
 
@@ -74,6 +77,7 @@ const placeToDetail = (place: Place): MarkerDetail => ({
   subtitle: place.categoryName || place.categoryGroupName || undefined,
   description: place.roadAddressName || place.addressName || undefined,
   image: place.image || undefined,
+  phone: place.phone || undefined,
   placeType: place.placeType,
   primaryTypeName: place.primaryTypeName,
 });
@@ -106,6 +110,7 @@ export default function HomeScreen() {
   const [filter, setFilter] = useState(FILTER_ALL);
   // 마커 클릭 시 하단에 띄울 상세. 마커 셋을 바꾸는 동작(검색/코스/카테고리 전환)에서 닫는다.
   const [detail, setDetail] = useState<MapMarker | null>(null);
+  const [detailExpanded, setDetailExpanded] = useState(false);
   // 현재 지도 뷰포트 경계. 지도 이동이 끝날 때마다 갱신되어 카테고리 장소를 그 영역으로 조회한다.
   const [viewport, setViewport] = useState<MapBounds | null>(null);
   // 경로 안내로 그린 경로(최단·그늘). 상세/마커가 바뀌면 지운다.
@@ -163,7 +168,8 @@ export default function HomeScreen() {
   const category = (PLACE_CATEGORIES as string[]).includes(filter)
     ? (filter as PlaceCategory)
     : null;
-  const { data: categoryPlaces = [] } = useCategoryPlaces(category, viewport);
+  const { data: categoryPlacesData } = useCategoryPlaces(category, viewport);
+  const categoryPlaces = categoryPlacesData ?? EMPTY_PLACES;
 
   const showResults = searchOpen && search.trim() !== "";
 
@@ -212,6 +218,7 @@ export default function HomeScreen() {
     setFilter(FILTER_ALL);
     setCoursePlaceMarker(marker);
     setDetail(marker);
+    setDetailExpanded(false);
     setPlanOpen(false);
   };
 
@@ -229,6 +236,19 @@ export default function HomeScreen() {
       label: place.placeName,
       detail: placeToDetail(place),
     });
+    setDetailExpanded(false);
+  };
+
+  const selectMarker = (marker: MapMarker) => {
+    setDetail(marker);
+    setDetailExpanded(false);
+  };
+
+  const setPlaceDetailExpanded = (nextExpanded: boolean) => {
+    if (detailExpanded && !nextExpanded && detail) {
+      mapRef.current?.focusLocation(detail);
+    }
+    setDetailExpanded(nextExpanded);
   };
 
   // 엔터(검색 확정): 결과 최상단을 선택해 마커+상세 카드를 띄운다.
@@ -256,6 +276,7 @@ export default function HomeScreen() {
   // 일반 상세(검색/마커/카테고리)는 그냥 닫는다. 어느 쪽이든 그린 경로는 정리한다.
   const closeDetail = () => {
     const fromPanel = coursePlaceMarker !== null;
+    setDetailExpanded(false);
     setDetail(null);
     setCoursePlaceMarker(null);
     resetRoutePlan();
@@ -402,7 +423,8 @@ export default function HomeScreen() {
       <MapLibreMap
         ref={mapRef}
         markers={markers}
-        onMarkerPress={setDetail}
+        onMarkerPress={selectMarker}
+        onMapPress={() => setPlaceDetailExpanded(false)}
         onRegionChange={setViewport}
         // 카테고리는 뷰포트 기반 조회라 카메라 자동 이동 OFF(재조회 루프 방지).
         // 검색/코스/코스장소 마커는 해당 지점으로 이동해야 하므로 ON.
@@ -563,63 +585,13 @@ export default function HomeScreen() {
 
       {/* 마커 클릭 상세 카드 — 하단 오버레이(태그리스트 위). 경로 설정 중엔 패널로 대체. */}
       {detail?.detail && !routePlanOpen && (
-        <View pointerEvents="box-none" className="absolute inset-x-0 bottom-0">
-          <SafeAreaView
-            edges={["bottom"]}
-            className="rounded-t-[16px] bg-neutral-0 shadow-md"
-          >
-            <View className="flex-row items-center gap-3 px-5 pt-4 pb-2">
-              <PlaceThumbnail
-                imageUrl={detail.detail.image}
-                placeType={detail.detail.placeType}
-                primaryTypeName={detail.detail.primaryTypeName}
-              />
-              <View className="flex-1">
-                <Text numberOfLines={1} className="text-heading-sm text-text">
-                  {detail.detail.title}
-                </Text>
-                {detail.detail.subtitle ? (
-                  <Text
-                    numberOfLines={1}
-                    className="mt-1 text-body-sm text-text-secondary"
-                  >
-                    {detail.detail.subtitle}
-                  </Text>
-                ) : null}
-                {detail.detail.description ? (
-                  <Text
-                    numberOfLines={2}
-                    className="mt-0.5 text-body-sm text-text-muted"
-                  >
-                    {detail.detail.description}
-                  </Text>
-                ) : null}
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={t("home.detail.close")}
-                onPress={closeDetail}
-                hitSlop={8}
-                className="self-start"
-              >
-                <X size={20} color={colors["text-muted"]} />
-              </Pressable>
-            </View>
-
-            {/* 경로 안내: 시작지·도착지를 정하는 설정 패널을 연다. */}
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t("route.guide")}
-              onPress={openRoutePlan}
-              className="mx-5 mt-1 mb-2 h-11 flex-row items-center justify-center gap-2 rounded-[8px] bg-primary active:bg-action-primary-hover"
-            >
-              <Navigation size={16} color={colors["on-action-primary"]} />
-              <Text className="text-label-lg text-on-action-primary">
-                {t("route.guide")}
-              </Text>
-            </Pressable>
-          </SafeAreaView>
-        </View>
+        <PlaceDetailSheet
+          detail={detail.detail}
+          expanded={detailExpanded}
+          onExpandedChange={setPlaceDetailExpanded}
+          onClose={closeDetail}
+          onRoutePress={openRoutePlan}
+        />
       )}
 
       {/* 지점 지정 안내 바 — 지도가 대부분 보이도록 하단에 얇게. 지도를 움직여 중앙

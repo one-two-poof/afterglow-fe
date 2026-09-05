@@ -9,6 +9,8 @@ export interface MarkerDetail {
   description?: string;
   /** 썸네일 이미지 URL */
   image?: string;
+  /** Phone number shown in the expanded place sheet. */
+  phone?: string;
   /** 기본 썸네일을 고르는 상위 장소 유형 */
   placeType?: string;
   /** 관광지 기본 썸네일을 고르는 세부 분류명 */
@@ -46,6 +48,8 @@ export interface RoutePin {
 export interface MapLibreMapRef {
   /** 현재 지도 중앙 좌표(없으면 null). */
   getCenter: () => Promise<{ lat: number; lng: number } | null>;
+  /** 선택한 장소로 카메라를 다시 이동한다. */
+  focusLocation: (point: { lat: number; lng: number }) => void;
 }
 
 export interface MapLibreMapProps {
@@ -59,6 +63,8 @@ export interface MapLibreMapProps {
   autoFitMarkers?: boolean;
   /** 마커 클릭 시 호출(상세 카드는 호출부에서 렌더). */
   onMarkerPress?: (marker: MapMarker) => void;
+  /** Called when the map background is tapped. */
+  onMapPress?: () => void;
   /** 그릴 경로들(최단·그늘). 색은 shady 여부로 구분. 바뀌면 경로가 보이도록 카메라 이동. */
   routeLines?: RouteLine[];
   /** 경로 시작·도착 지점 핀(경로 설정 중 표시). */

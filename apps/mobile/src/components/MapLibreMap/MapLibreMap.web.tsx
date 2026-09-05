@@ -12,7 +12,14 @@ import { type MapLibreMapProps, type MapLibreMapRef } from "./types";
 export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
   function MapLibreMap(_props, ref) {
     const { t } = useI18n();
-    useImperativeHandle(ref, () => ({ getCenter: async () => null }), []);
+    useImperativeHandle(
+      ref,
+      () => ({
+        getCenter: async () => null,
+        focusLocation: () => undefined,
+      }),
+      [],
+    );
     return (
       <View className="flex-1 items-center justify-center bg-surface-muted">
         <Text className="text-body-sm text-text-muted">
