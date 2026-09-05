@@ -7,13 +7,13 @@ import {
   BackHandler,
   Image,
   KeyboardAvoidingView,
+  type LayoutChangeEvent,
   PanResponder,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  useWindowDimensions,
   View,
 } from "react-native";
 import {
@@ -58,10 +58,9 @@ export const TripPlanPanel = ({
 }: TripPlanPanelProps) => {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
-  const sheetHeight = Math.max(windowHeight - insets.top, 0);
+  const [sheetHeight, setSheetHeight] = useState(0);
   const collapsedHeight = Math.min(
-    Math.max(windowHeight * COLLAPSED_HEIGHT_RATIO, MIN_COLLAPSED_HEIGHT),
+    Math.max(sheetHeight * COLLAPSED_HEIGHT_RATIO, MIN_COLLAPSED_HEIGHT),
     sheetHeight,
   );
   const collapsedOffset = Math.max(sheetHeight - collapsedHeight, 0);
@@ -99,6 +98,14 @@ export const TripPlanPanel = ({
     },
     [collapsedOffset, translateY],
   );
+
+  useEffect(() => {
+    translateY.setValue(expanded ? 0 : collapsedOffset);
+  }, [collapsedOffset, expanded, translateY]);
+
+  const handleLayout = useCallback((event: LayoutChangeEvent) => {
+    setSheetHeight(event.nativeEvent.layout.height);
+  }, []);
 
   const panResponder = useMemo(
     () =>
@@ -232,7 +239,8 @@ export const TripPlanPanel = ({
   return (
     <View
       pointerEvents="box-none"
-      style={StyleSheet.absoluteFill}
+      style={[styles.panelLayer, { top: insets.top }]}
+      onLayout={handleLayout}
       accessibilityViewIsModal={false}
     >
       <Animated.View
@@ -416,6 +424,13 @@ export const TripPlanPanel = ({
 };
 
 const styles = StyleSheet.create({
+  panelLayer: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    left: 0,
+    overflow: "hidden",
+  },
   equalActionButton: {
     flexBasis: 0,
     flexGrow: 1,
