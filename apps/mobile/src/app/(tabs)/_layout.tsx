@@ -1,31 +1,8 @@
 import { colors } from "@afterglow/tokens";
 import { Tabs } from "expo-router";
-import { Home, User } from "lucide-react-native";
-import type { ColorValue } from "react-native";
-import Svg, { Path } from "react-native-svg";
+import { Home, LineSquiggle, User } from "lucide-react-native";
 
 import { useI18n } from "@/i18n/i18n-provider";
-
-function MapRouteIcon({ color, size }: { color: ColorValue; size: number }) {
-  return (
-    <Svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={1.25}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <Path d="M3 7l6 -3l6 3l6 -3v13l-6 3l-6 -3l-6 3v-13" />
-      <Path d="M9 12v.01" />
-      <Path d="M6 13v.01" />
-      <Path d="M17 15l-4 -4" />
-      <Path d="M13 15l4 -4" />
-    </Svg>
-  );
-}
 
 /**
  * 하단 탭 네비게이션. 웹의 Footer(홈/내 코스/내 정보)에 대응한다.
@@ -60,7 +37,7 @@ export default function TabsLayout() {
         options={{
           title: t("tabs.courses"),
           tabBarIcon: ({ color, size }) => (
-            <MapRouteIcon color={color} size={size} />
+            <LineSquiggle color={color} size={size} />
           ),
         }}
       />
