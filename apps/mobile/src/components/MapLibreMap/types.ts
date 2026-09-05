@@ -22,8 +22,25 @@ export interface MapMarker {
   lat: number;
   lng: number;
   label?: string;
+  /** Optional visual treatment used by ordered course markers. */
+  color?: string;
+  /** Text rendered inside the marker (for example, a visit order). */
+  sequenceLabel?: string;
   /** 마커 클릭 시 보여줄 상세(없으면 카드 미표시) */
   detail?: MarkerDetail;
+}
+
+/** A lightweight decorative line connecting related map markers. */
+export interface MapConnectionLine {
+  coordinates: number[][];
+  color: string;
+}
+
+export interface MapCameraPadding {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
 }
 
 /**
@@ -55,6 +72,10 @@ export interface MapLibreMapRef {
 export interface MapLibreMapProps {
   /** 지도에 표시할 마커들. 바뀌면 그 마커들이 보이도록 카메라가 이동한다. */
   markers?: MapMarker[];
+  /** Straight decorative connections between markers, rendered below them. */
+  connectionLines?: MapConnectionLine[];
+  /** Padding used when fitting all markers into view. */
+  markerFitPadding?: MapCameraPadding;
   /**
    * markers가 바뀔 때 그 지점들로 카메라를 이동할지. 기본 true.
    * 뷰포트 기반 조회(카테고리)처럼 사용자가 직접 지도를 움직여 마커가 갱신되는

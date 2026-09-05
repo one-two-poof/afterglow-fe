@@ -12,6 +12,7 @@ import {
   Layer,
   type LngLatBounds,
   Map,
+  Marker as MapMarkerView,
   type MapRef,
   VectorSource,
 } from "@maplibre/maplibre-react-native";
@@ -142,6 +143,8 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
   function MapLibreMap(
     {
       markers = [],
+      connectionLines = [],
+      markerFitPadding,
       autoFitMarkers = true,
       onMarkerPress,
       onMapPress,
@@ -390,14 +393,35 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
     const markersGeoJSON = useMemo<GeoJSON.FeatureCollection>(
       () => ({
         type: "FeatureCollection",
-        features: markers.map((m, i) => ({
-          type: "Feature",
-          // 클릭 시 어떤 마커인지 되찾도록 인덱스를 실어 보낸다(복잡한 객체 대신).
-          properties: { index: i },
-          geometry: { type: "Point", coordinates: [m.lng, m.lat] },
-        })),
+        features: markers.flatMap((m, i) =>
+          m.color
+            ? []
+            : [
+                {
+                  type: "Feature",
+                  // 클릭 시 원본 markers 배열에서 찾을 수 있도록 인덱스를 유지한다.
+                  properties: { index: i },
+                  geometry: {
+                    type: "Point",
+                    coordinates: [m.lng, m.lat],
+                  },
+                },
+              ],
+        ),
       }),
       [markers],
+    );
+
+    const connectionLinesGeoJSON = useMemo<GeoJSON.FeatureCollection>(
+      () => ({
+        type: "FeatureCollection",
+        features: connectionLines.map((line) => ({
+          type: "Feature",
+          properties: { color: line.color },
+          geometry: { type: "LineString", coordinates: line.coordinates },
+        })),
+      }),
+      [connectionLines],
     );
 
     // 경로(최단·그늘)를 LineString FeatureCollection으로. shady 여부를 실어 색을 구분.
@@ -476,9 +500,9 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
           Math.max(...lngs),
           Math.max(...lats),
         ],
-        { duration: 600 },
+        { padding: markerFitPadding, duration: 600 },
       );
-    }, [markers, autoFitMarkers]);
+    }, [markers, autoFitMarkers, markerFitPadding]);
 
     // 경로가 그려지면 전체 경로가 보이도록 카메라 이동(패딩 줘서 잘리지 않게).
     useEffect(() => {
@@ -595,7 +619,26 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
             </GeoJSONSource>
           )}
 
-          {markers.length > 0 && (
+          {connectionLines.length > 0 && (
+            <GeoJSONSource
+              id="marker-connections"
+              data={connectionLinesGeoJSON}
+            >
+              <Layer
+                id="marker-connections-line"
+                type="line"
+                layout={{ "line-cap": "round", "line-join": "round" }}
+                paint={{
+                  "line-color": ["get", "color"],
+                  "line-width": 2,
+                  "line-opacity": 0.62,
+                  "line-dasharray": [0.35, 1.15],
+                }}
+              />
+            </GeoJSONSource>
+          )}
+
+          {markersGeoJSON.features.length > 0 && (
             <GeoJSONSource
               id="place-markers"
               data={markersGeoJSON}
@@ -604,6 +647,7 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
               <Layer
                 id="place-markers-circle"
                 type="circle"
+                minzoom={0}
                 paint={{
                   "circle-radius": 6,
                   "circle-color": colors.primary,
@@ -612,6 +656,42 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
                 }}
               />
             </GeoJSONSource>
+          )}
+
+          {markers.map((marker, index) =>
+            marker.color ? (
+              <MapMarkerView
+                key={`course-marker-${index}-${marker.lat}-${marker.lng}`}
+                id={`course-marker-${index}`}
+                lngLat={[marker.lng, marker.lat]}
+                anchor="center"
+                onPress={() => onMarkerPress?.(marker)}
+              >
+                {marker.sequenceLabel ? (
+                  <View
+                    accessible
+                    accessibilityRole="button"
+                    accessibilityLabel={marker.label}
+                    className="size-7 items-center justify-center rounded-full border-2 border-neutral-0"
+                    style={{ backgroundColor: marker.color }}
+                  >
+                    <Text className="text-label-sm text-neutral-0">
+                      {marker.sequenceLabel}
+                    </Text>
+                  </View>
+                ) : (
+                  <View
+                    accessible
+                    accessibilityRole="button"
+                    accessibilityLabel={marker.label}
+                    className="size-5 items-center justify-center rounded-full border-2 border-neutral-0"
+                    style={{ backgroundColor: marker.color }}
+                  >
+                    <View className="size-2 rounded-full bg-neutral-0" />
+                  </View>
+                )}
+              </MapMarkerView>
+            ) : null,
           )}
 
           {/* 경로 시작/도착 핀 — 마커 위에 올려 잘 보이게. 시작=보라, 도착=빨강 */}

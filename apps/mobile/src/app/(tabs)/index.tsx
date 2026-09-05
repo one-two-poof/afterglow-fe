@@ -55,7 +55,7 @@ import { type Place } from "@/types/place";
 import {
   type CourseMarker,
   courseTitle,
-  savedCourseToMarkers,
+  savedCourseToMapDecoration,
 } from "@/types/recommendation";
 
 // 필터 해제(기본) 값. "전체" = 모든 마커 해제. 저장 코스 태그는 selectionId 문자열,
@@ -71,6 +71,53 @@ const PLACE_CATEGORIES: PlaceCategory[] = [
 
 const EMPTY_PLACES: Place[] = [];
 const CATEGORY_MIN_ZOOM = 14;
+const SAVED_COURSE_MAP_PADDING = {
+  top: 150,
+  right: 48,
+  bottom: 180,
+  left: 48,
+} as const;
+
+const formatLegendDate = (iso: string, locale: string) => {
+  const [year, month, day] = iso.slice(0, 10).split("-").map(Number);
+  if (!year || !month || !day) return iso;
+  return new Intl.DateTimeFormat(locale, {
+    month: "numeric",
+    day: "numeric",
+  }).format(new Date(year, month - 1, day, 12));
+};
+
+function CourseDayLegend({
+  days,
+  locale,
+}: {
+  days: { date: string; color: string }[];
+  locale: string;
+}) {
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerClassName="items-center gap-2"
+      accessibilityRole="summary"
+    >
+      {days.map((day, index) => (
+        <View
+          key={`${day.date}-${index}`}
+          className="h-8 flex-row items-center gap-2 rounded-full border border-border bg-neutral-0 px-3 shadow-sm"
+        >
+          <View
+            className="size-2.5 rounded-full"
+            style={{ backgroundColor: day.color }}
+          />
+          <Text className="text-label-sm text-text">
+            DAY {index + 1} · {formatLegendDate(day.date, locale)}
+          </Text>
+        </View>
+      ))}
+    </ScrollView>
+  );
+}
 
 function MapRouteIcon({ color }: { color: ColorValue }) {
   return (
@@ -116,7 +163,7 @@ const placeToDetail = (place: Place): MarkerDetail => ({
  * "전체"는 모든 마커를 해제한다.
  */
 export default function HomeScreen() {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const showToast = useToastStore((s) => s.show);
@@ -192,6 +239,11 @@ export default function HomeScreen() {
   );
   const selectedCourse = courses.find(
     (course) => String(course.selectionId) === filter,
+  );
+  const selectedCourseMap = useMemo(
+    () =>
+      selectedCourse ? savedCourseToMapDecoration(selectedCourse) : null,
+    [selectedCourse],
   );
 
   // 카테고리 태그(병원/관광명소/숙소) 선택 시 현재 뷰포트의 장소를 조회.
@@ -447,20 +499,30 @@ export default function HomeScreen() {
       ];
     }
     if (selectedCourse) {
-      return savedCourseToMarkers(selectedCourse);
+      return selectedCourseMap?.markers ?? [];
     }
     return categoryPlaces.map((place) => ({
       ...toLatLng(place),
       label: place.placeName,
       detail: placeToDetail(place),
     }));
-  }, [coursePlaceMarker, selectedPlace, selectedCourse, categoryPlaces]);
+  }, [
+    coursePlaceMarker,
+    selectedPlace,
+    selectedCourse,
+    selectedCourseMap,
+    categoryPlaces,
+  ]);
 
   return (
     <View className="flex-1 bg-bg">
       <MapLibreMap
         ref={mapRef}
         markers={markers}
+        connectionLines={selectedCourseMap?.connectionLines}
+        markerFitPadding={
+          selectedCourseMap ? SAVED_COURSE_MAP_PADDING : undefined
+        }
         onMarkerPress={selectMarker}
         onMapPress={() => {
           Keyboard.dismiss();
@@ -562,7 +624,27 @@ export default function HomeScreen() {
       {/* 하단 태그: 카테고리(전체/병원/관광명소/숙소) + 저장 코스(로그인 시).
           카테고리를 고르면 그 카테고리 장소를, 코스를 고르면 코스 지점들을 마커로
           찍는다. "전체"는 모든 마커 해제. 웹 홈처럼 지도 맨 하단에 둔다. */}
-      <View pointerEvents="box-none" className="absolute inset-x-0 bottom-0">
+      <View
+        pointerEvents="box-none"
+        className="absolute inset-x-0 bottom-0 gap-3"
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t("home.plan.open")}
+          onPress={openPlan}
+          className={`mr-4 size-14 items-center justify-center self-end rounded-full bg-primary shadow-md active:bg-action-primary-hover ${
+            selectedCourseMap && !showResults ? "" : "mb-7"
+          }`}
+        >
+          <Plus size={28} color={colors["on-action-primary"]} />
+        </Pressable>
+
+        {selectedCourseMap && !showResults ? (
+          <View pointerEvents="box-none" className="px-4">
+            <CourseDayLegend days={selectedCourseMap.days} locale={locale} />
+          </View>
+        ) : null}
+
         <TagList
           value={filter}
           onChange={selectFilter}
@@ -616,15 +698,6 @@ export default function HomeScreen() {
           ))}
         </TagList>
       </View>
-
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t("home.plan.open")}
-        onPress={openPlan}
-        className="absolute right-4 bottom-24 size-14 items-center justify-center rounded-full bg-primary shadow-md active:bg-action-primary-hover"
-      >
-        <Plus size={28} color={colors["on-action-primary"]} />
-      </Pressable>
 
       <TripPlanPanel
         open={planOpen}

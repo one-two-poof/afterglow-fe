@@ -9,7 +9,20 @@
  */
 import type { LatLng, MapPoint } from "@afterglow/utils";
 
-import type { MarkerDetail } from "@/components/MapLibreMap/types";
+import type {
+  MapConnectionLine,
+  MarkerDetail,
+} from "@/components/MapLibreMap/types";
+
+/** 날짜 순서대로 순환하는 코스 전용 팔레트. 흰색 번호가 읽히도록 중명도 색을 사용한다. */
+export const COURSE_DAY_COLORS = [
+  "#0f766e",
+  "#c2410c",
+  "#7c3aed",
+  "#1d4ed8",
+  "#be185d",
+  "#15803d",
+] as const;
 
 /**
  * 코스 좌표(mapX=위도/mapY=경도) → 지도 좌표(lat/lng).
@@ -97,7 +110,18 @@ export function courseSummary(course: RecommendedCourse) {
 }
 
 /** 지도 마커 (좌표 + 라벨 + 상세). 모바일 MapMarker와 호환된다. */
-export type CourseMarker = LatLng & { label: string; detail: MarkerDetail };
+export type CourseMarker = LatLng & {
+  label: string;
+  detail: MarkerDetail;
+  color?: string;
+  sequenceLabel?: string;
+};
+
+export interface SavedCourseMapDecoration {
+  markers: CourseMarker[];
+  connectionLines: MapConnectionLine[];
+  days: { date: string; color: string }[];
+}
 
 /** 코스 장소(RecommendedPlace)를 마커 상세 카드용 정보로 변환. */
 const placeToDetail = (place: RecommendedPlace): MarkerDetail => {
@@ -158,18 +182,57 @@ export function courseToMarkers(course: RecommendedCourse): CourseMarker[] {
  * 각 날의 출발지 + 방문 장소 전체를 이름 라벨과 함께 반환한다(웹과 동일).
  */
 export function savedCourseToMarkers(course: SavedCourse): CourseMarker[] {
-  return course.daily_schedules.flatMap((day) => [
-    {
-      ...courseToLatLng(day.start_location),
+  return savedCourseToMapDecoration(course).markers;
+}
+
+/**
+ * 저장 코스를 날짜별 색상으로 꾸민 지도 데이터로 변환한다.
+ * 출발지는 선에는 포함하지만 번호를 부여하지 않고, 방문 장소만 그날의 순서로 표시한다.
+ */
+export function savedCourseToMapDecoration(
+  course: SavedCourse,
+): SavedCourseMapDecoration {
+  const markers: CourseMarker[] = [];
+  const connectionLines: MapConnectionLine[] = [];
+  const days: SavedCourseMapDecoration["days"] = [];
+
+  course.daily_schedules.forEach((day, dayIndex) => {
+    const color = COURSE_DAY_COLORS[dayIndex % COURSE_DAY_COLORS.length]!;
+    days.push({ date: day.date, color });
+    const start = courseToLatLng(day.start_location);
+    const orderedPlaces = [...day.places].sort(
+      (a, b) => a.visit_order - b.visit_order,
+    );
+
+    markers.push({
+      ...start,
       label: day.start_location.name,
+      color,
       detail: { title: day.start_location.name, subtitle: "출발지" },
-    },
-    ...day.places.map((place) => ({
-      ...courseToLatLng(place),
-      label: place.place_name,
-      detail: placeToDetail(place),
-    })),
-  ]);
+    });
+    markers.push(
+      ...orderedPlaces.map((place, placeIndex) => ({
+        ...courseToLatLng(place),
+        label: place.place_name,
+        color,
+        sequenceLabel: String(place.visit_order || placeIndex + 1),
+        detail: placeToDetail(place),
+      })),
+    );
+
+    const coordinates = [
+      [start.lng, start.lat],
+      ...orderedPlaces.map((place) => {
+        const point = courseToLatLng(place);
+        return [point.lng, point.lat];
+      }),
+    ];
+    if (coordinates.length > 1) {
+      connectionLines.push({ coordinates, color });
+    }
+  });
+
+  return { markers, connectionLines, days };
 }
 
 /** 코스의 방문 장소(RecommendedPlace) 하나를 지도 마커(좌표+상세 카드)로 변환. */
