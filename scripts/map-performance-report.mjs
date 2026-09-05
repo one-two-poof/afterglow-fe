@@ -11,7 +11,7 @@ export function parseMapPerformanceLog(text) {
     if (markerIndex < 0) continue;
     const json = line.slice(markerIndex + LOG_MARKER.length).trim();
     const record = JSON.parse(json);
-    if (record.event === "building_shadows_rendered") records.push(record);
+    if (record.event === "building_shadows_measured") records.push(record);
   }
   return records;
 }
@@ -41,12 +41,12 @@ export function buildMapPerformanceReport({ title, device, scenarios }) {
       rows.push(
         `| ${scenario.label} | ${zoom} | ${records.length} | ${format(
           percentile(
-            records.map((record) => record.totalUntilRenderedMs),
+            records.map((record) => record.totalUntilNextFrameMs),
             50,
           ),
         )} | ${format(
           percentile(
-            records.map((record) => record.totalUntilRenderedMs),
+            records.map((record) => record.totalUntilNextFrameMs),
             95,
           ),
         )} | ${format(

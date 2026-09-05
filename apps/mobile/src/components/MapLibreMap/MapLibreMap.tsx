@@ -144,9 +144,6 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
     const lastZoomRef = useRef(15);
     const shadowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const shadowGenerationRef = useRef(0);
-    const pendingShadowPerformanceRef = useRef<ShadowPerformanceSample | null>(
-      null,
-    );
     const lastReportedBoundsRef = useRef<MapBounds | null>(null);
 
     // 뷰포트의 건물을 조회해 그림자 폴리곤을 계산한다.
@@ -181,8 +178,9 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
             },
           );
           const builtAt = performance.now();
+          setShadows(nextShadows);
           if (__DEV__) {
-            pendingShadowPerformanceRef.current = {
+            const sample: ShadowPerformanceSample = {
               startedAt,
               zoom,
               sourceFeatureCount: features.length,
@@ -190,8 +188,29 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
               queryMs: queriedAt - startedAt,
               buildMs: builtAt - queriedAt,
             };
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                if (generation !== shadowGenerationRef.current) {
+                  return;
+                }
+                console.info(
+                  `${MAP_PERFORMANCE_LOG_MARKER} ${JSON.stringify({
+                    schemaVersion: 1,
+                    event: "building_shadows_measured",
+                    recordedAt: new Date().toISOString(),
+                    zoom: Number(sample.zoom.toFixed(1)),
+                    sourceFeatures: sample.sourceFeatureCount,
+                    shadowFeatures: sample.shadowFeatureCount,
+                    queryMs: Number(sample.queryMs.toFixed(1)),
+                    buildMs: Number(sample.buildMs.toFixed(1)),
+                    totalUntilNextFrameMs: Number(
+                      (performance.now() - sample.startedAt).toFixed(1),
+                    ),
+                  })}`,
+                );
+              });
+            });
           }
-          setShadows(nextShadows);
         } catch {
           // 쿼리 실패(스타일 미로드 등)는 다음 이동에서 다시 시도되므로 무시.
         }
@@ -440,25 +459,6 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
           // 최초 타일 렌더 완료 시 1회 계산(정지 상태에서도 그림자가 뜨도록) + 초기 뷰포트 보고
           onDidFinishRenderingMapFully={() => {
             void reportRegion();
-            if (__DEV__ && pendingShadowPerformanceRef.current) {
-              const sample = pendingShadowPerformanceRef.current;
-              pendingShadowPerformanceRef.current = null;
-              console.info(
-                `${MAP_PERFORMANCE_LOG_MARKER} ${JSON.stringify({
-                  schemaVersion: 1,
-                  event: "building_shadows_rendered",
-                  recordedAt: new Date().toISOString(),
-                  zoom: Number(sample.zoom.toFixed(1)),
-                  sourceFeatures: sample.sourceFeatureCount,
-                  shadowFeatures: sample.shadowFeatureCount,
-                  queryMs: Number(sample.queryMs.toFixed(1)),
-                  buildMs: Number(sample.buildMs.toFixed(1)),
-                  totalUntilRenderedMs: Number(
-                    (performance.now() - sample.startedAt).toFixed(1),
-                  ),
-                })}`,
-              );
-            }
             if (!shadowOverlayActive || didInitialShadowRef.current) {
               return;
             }

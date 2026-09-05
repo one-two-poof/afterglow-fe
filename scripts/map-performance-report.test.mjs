@@ -10,13 +10,13 @@ import {
 test("parses only structured map performance records", () => {
   const records = parseMapPerformanceLog(`
 LOG unrelated message
-LOG [map-perf] {"event":"building_shadows_rendered","zoom":15,"queryMs":10,"buildMs":20,"totalUntilRenderedMs":40,"sourceFeatures":100,"shadowFeatures":90}
+LOG [map-perf] {"event":"building_shadows_measured","zoom":15,"queryMs":10,"buildMs":20,"totalUntilNextFrameMs":40,"sourceFeatures":100,"shadowFeatures":90}
 WARN ignored
 `);
 
   assert.equal(records.length, 1);
   assert.equal(records[0].zoom, 15);
-  assert.equal(records[0].totalUntilRenderedMs, 40);
+  assert.equal(records[0].totalUntilNextFrameMs, 40);
 });
 
 test("calculates nearest-rank percentiles", () => {
@@ -33,20 +33,20 @@ test("builds a markdown report grouped by scenario and zoom", () => {
         label: "optimized",
         records: [
           {
-            event: "building_shadows_rendered",
+            event: "building_shadows_measured",
             zoom: 15,
             queryMs: 10,
             buildMs: 20,
-            totalUntilRenderedMs: 40,
+            totalUntilNextFrameMs: 40,
             sourceFeatures: 100,
             shadowFeatures: 90,
           },
           {
-            event: "building_shadows_rendered",
+            event: "building_shadows_measured",
             zoom: 15,
             queryMs: 30,
             buildMs: 40,
-            totalUntilRenderedMs: 80,
+            totalUntilNextFrameMs: 80,
             sourceFeatures: 120,
             shadowFeatures: 100,
           },

@@ -31,7 +31,7 @@
 개발 빌드는 한 줄에 하나의 JSON 레코드를 출력한다. 정확한 위치 좌표는 포함하지 않는다.
 
 ```text
-[map-perf] {"schemaVersion":1,"event":"building_shadows_rendered","recordedAt":"2026-09-05T08:00:00.000Z","zoom":15,"sourceFeatures":1240,"shadowFeatures":1187,"queryMs":86.4,"buildMs":41.2,"totalUntilRenderedMs":173.8}
+[map-perf] {"schemaVersion":1,"event":"building_shadows_measured","recordedAt":"2026-09-05T08:00:00.000Z","zoom":15,"sourceFeatures":1240,"shadowFeatures":1187,"queryMs":86.4,"buildMs":41.2,"totalUntilNextFrameMs":173.8}
 ```
 
 PowerShell에서 Metro 로그를 파일로 함께 저장한다.
@@ -54,7 +54,7 @@ pnpm perf:map:report -- `
   --device "iPhone 모델 / iOS 버전"
 ```
 
-보고서는 시나리오·줌별 표본 수, 렌더 완료 총시간 p50/p95, 피처 조회 p50, 그림자 계산 p50, 평균 입력 건물·그림자 수를 만든다. 원시 로그 디렉터리는 Git에서 제외하고 생성된 Markdown 결과만 검토 후 커밋한다.
+보고서는 시나리오·줌별 표본 수, 그림자 적용 후 다음 프레임까지 총시간 p50/p95, 피처 조회 p50, 그림자 계산 p50, 평균 입력 건물·그림자 수를 만든다. 이 값은 JS가 다음 프레임을 돌려받은 시점이며 MapLibre 네이티브 GPU 렌더 완료를 직접 측정한 값은 아니다. 원시 로그 디렉터리는 Git에서 제외하고 생성된 Markdown 결과만 검토 후 커밋한다.
 
 집계기 단위 테스트는 다음 명령으로 실행한다.
 
