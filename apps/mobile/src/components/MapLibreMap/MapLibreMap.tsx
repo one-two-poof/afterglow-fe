@@ -71,6 +71,7 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
       markers = [],
       autoFitMarkers = true,
       onMarkerPress,
+      onMapPress,
       routeLines = [],
       routePins = [],
       onRegionChange,
@@ -314,6 +315,7 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
           // 웹의 attributionControl:false와 동일 — 정보(ⓘ) 버튼·로고 숨김
           attribution={false}
           logo={false}
+          onPress={onMapPress}
           // 이동/줌 종료 시 그림자 재계산 + 뷰포트 경계 보고
           onRegionDidChange={() => {
             void updateShadows();
