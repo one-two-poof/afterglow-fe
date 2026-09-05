@@ -66,6 +66,8 @@ const PLACE_CATEGORIES: PlaceCategory[] = [
   "accommodation",
 ];
 
+const EMPTY_PLACES: Place[] = [];
+
 /** 경로 시작/도착 지점 좌표 */
 type LatLngPoint = { lat: number; lng: number };
 
@@ -166,7 +168,8 @@ export default function HomeScreen() {
   const category = (PLACE_CATEGORIES as string[]).includes(filter)
     ? (filter as PlaceCategory)
     : null;
-  const { data: categoryPlaces = [] } = useCategoryPlaces(category, viewport);
+  const { data: categoryPlacesData } = useCategoryPlaces(category, viewport);
+  const categoryPlaces = categoryPlacesData ?? EMPTY_PLACES;
 
   const showResults = searchOpen && search.trim() !== "";
 
@@ -239,6 +242,13 @@ export default function HomeScreen() {
   const selectMarker = (marker: MapMarker) => {
     setDetail(marker);
     setDetailExpanded(false);
+  };
+
+  const setPlaceDetailExpanded = (nextExpanded: boolean) => {
+    if (detailExpanded && !nextExpanded && detail) {
+      mapRef.current?.focusLocation(detail);
+    }
+    setDetailExpanded(nextExpanded);
   };
 
   // 엔터(검색 확정): 결과 최상단을 선택해 마커+상세 카드를 띄운다.
@@ -414,7 +424,7 @@ export default function HomeScreen() {
         ref={mapRef}
         markers={markers}
         onMarkerPress={selectMarker}
-        onMapPress={() => setDetailExpanded(false)}
+        onMapPress={() => setPlaceDetailExpanded(false)}
         onRegionChange={setViewport}
         // 카테고리는 뷰포트 기반 조회라 카메라 자동 이동 OFF(재조회 루프 방지).
         // 검색/코스/코스장소 마커는 해당 지점으로 이동해야 하므로 ON.
@@ -578,7 +588,7 @@ export default function HomeScreen() {
         <PlaceDetailSheet
           detail={detail.detail}
           expanded={detailExpanded}
-          onExpandedChange={setDetailExpanded}
+          onExpandedChange={setPlaceDetailExpanded}
           onClose={closeDetail}
           onRoutePress={openRoutePlan}
         />

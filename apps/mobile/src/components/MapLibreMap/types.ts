@@ -48,6 +48,8 @@ export interface RoutePin {
 export interface MapLibreMapRef {
   /** 현재 지도 중앙 좌표(없으면 null). */
   getCenter: () => Promise<{ lat: number; lng: number } | null>;
+  /** 선택한 장소로 카메라를 다시 이동한다. */
+  focusLocation: (point: { lat: number; lng: number }) => void;
 }
 
 export interface MapLibreMapProps {

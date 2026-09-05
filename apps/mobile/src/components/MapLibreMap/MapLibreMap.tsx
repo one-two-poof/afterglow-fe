@@ -98,6 +98,13 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
             return null;
           }
         },
+        focusLocation: (point) => {
+          cameraRef.current?.flyTo({
+            center: [point.lng, point.lat],
+            zoom: 16,
+            duration: 600,
+          });
+        },
       }),
       [],
     );
