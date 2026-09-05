@@ -47,13 +47,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
       # EAS 클라우드에서 빌드 후, 완료되면 App Store Connect(TestFlight)로 자동 제출.
       # 버전/빌드번호는 eas.json(appVersionSource: remote + autoIncrement)이 관리.
+      # eas-cli는 EXPO_TOKEN 환경변수로 비대화형 인증한다(expo-github-action의 yarn
+      # 설치 실패 이슈를 피하려 pnpm dlx로 직접 실행).
       - name: Build iOS and submit to TestFlight
         working-directory: apps/mobile
-        run: eas build --platform ios --profile production --non-interactive --auto-submit
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: pnpm dlx eas-cli@23.2.0 build --platform ios --profile production --non-interactive --auto-submit
