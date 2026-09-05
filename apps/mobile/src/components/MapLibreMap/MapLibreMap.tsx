@@ -638,7 +638,7 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
 
         <View
           pointerEvents="box-none"
-          className="absolute right-1 items-end gap-2"
+          className="absolute right-4 items-end gap-2"
           style={{ top: insets.top + 64 }}
         >
           {BUILDINGS_PMTILES_URL ? (

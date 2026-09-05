@@ -17,6 +17,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   type ColorValue,
+  Keyboard,
   Pressable,
   ScrollView,
   Text,
@@ -461,7 +462,10 @@ export default function HomeScreen() {
         ref={mapRef}
         markers={markers}
         onMarkerPress={selectMarker}
-        onMapPress={() => setPlaceDetailExpanded(false)}
+        onMapPress={() => {
+          Keyboard.dismiss();
+          setPlaceDetailExpanded(false);
+        }}
         onRegionChange={updateViewport}
         // 카테고리는 뷰포트 기반 조회라 카메라 자동 이동 OFF(재조회 루프 방지).
         // 검색/코스/코스장소 마커는 해당 지점으로 이동해야 하므로 ON.
@@ -617,7 +621,7 @@ export default function HomeScreen() {
         accessibilityRole="button"
         accessibilityLabel={t("home.plan.open")}
         onPress={openPlan}
-        className="absolute right-5 bottom-24 size-14 items-center justify-center rounded-full bg-primary shadow-md active:bg-action-primary-hover"
+        className="absolute right-4 bottom-24 size-14 items-center justify-center rounded-full bg-primary shadow-md active:bg-action-primary-hover"
       >
         <Plus size={28} color={colors["on-action-primary"]} />
       </Pressable>
