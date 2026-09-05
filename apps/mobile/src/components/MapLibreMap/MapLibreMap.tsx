@@ -15,7 +15,7 @@ import {
   type MapRef,
   VectorSource,
 } from "@maplibre/maplibre-react-native";
-import { CloudSun, LocateFixed } from "lucide-react-native";
+import { LocateFixed } from "lucide-react-native";
 import {
   forwardRef,
   useCallback,
@@ -26,12 +26,15 @@ import {
   useState,
 } from "react";
 import {
+  Animated,
   type NativeSyntheticEvent,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Svg, { Path } from "react-native-svg";
 
 import { env } from "@/lib/env";
 import { getCurrentLocation } from "@/lib/location";
@@ -80,6 +83,54 @@ const EMPTY_SHADOWS: GeoJSON.FeatureCollection = {
 // [lng, lat] 서울시청 (기본값). MapLibre는 [lng, lat] 순서.
 const SEOUL: [number, number] = [126.978, 37.5665];
 
+function SunHighIcon({ color }: { color: string }) {
+  return (
+    <Svg
+      width={24}
+      height={24}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <Path
+        d="M14.828 14.828a4 4 0 1 0 -5.656 -5.656a4 4 0 0 0 5.656 5.656"
+        fill={color}
+      />
+      <Path d="M6.343 17.657l-1.414 1.414" />
+      <Path d="M6.343 6.343l-1.414 -1.414" />
+      <Path d="M17.657 6.343l1.414 -1.414" />
+      <Path d="M17.657 17.657l1.414 1.414" />
+      <Path d="M4 12h-2" />
+      <Path d="M12 4v-2" />
+      <Path d="M20 12h2" />
+      <Path d="M12 20v2" />
+    </Svg>
+  );
+}
+
+function CloudIcon({ color }: { color: string }) {
+  return (
+    <Svg
+      width={24}
+      height={24}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={1}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <Path
+        d="M6.657 18c-2.572 0 -4.657 -2.007 -4.657 -4.483c0 -2.475 2.085 -4.482 4.657 -4.482c.393 -1.762 1.794 -3.2 3.675 -3.773c1.88 -.572 3.956 -.193 5.444 1c1.488 1.19 2.162 3.007 1.77 4.769h.99c1.913 0 3.464 1.56 3.464 3.486c0 1.927 -1.551 3.487 -3.465 3.487h-11.878"
+        fill={colors["neutral-0"]}
+      />
+    </Svg>
+  );
+}
+
 /**
  * 지도 렌더 (RN). 배경지도 + 건물 PMTiles + 마커.
  * markers가 주어지면 그 지점들이 보이도록 카메라를 이동한다(웹 fitBounds와 동일 의도).
@@ -101,12 +152,47 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
     ref,
   ) {
     const { t } = useI18n();
+    const insets = useSafeAreaInsets();
     const cameraRef = useRef<CameraRef>(null);
     const mapRef = useRef<MapRef>(null);
     // 그림자 오버레이는 계산·브리지 비용이 크므로 사용자가 필요할 때만 켠다.
     const [shadowsEnabled, setShadowsEnabled] = useState(false);
+    const [shadowControlProgress] = useState(() => new Animated.Value(0));
+    const shadowControlTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+      null,
+    );
     const shadowOverlayActive = Boolean(
       BUILDINGS_PMTILES_URL && shadowsEnabled,
+    );
+
+    const toggleShadows = useCallback(() => {
+      setShadowsEnabled((enabled) => !enabled);
+      if (shadowControlTimerRef.current) {
+        clearTimeout(shadowControlTimerRef.current);
+      }
+      shadowControlProgress.stopAnimation();
+      Animated.timing(shadowControlProgress, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: false,
+      }).start();
+      shadowControlTimerRef.current = setTimeout(() => {
+        Animated.timing(shadowControlProgress, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: false,
+        }).start();
+        shadowControlTimerRef.current = null;
+      }, 1200);
+    }, [shadowControlProgress]);
+
+    useEffect(
+      () => () => {
+        if (shadowControlTimerRef.current) {
+          clearTimeout(shadowControlTimerRef.current);
+        }
+      },
+      [],
     );
 
     // 지도 중앙 좌표를 호출부에 노출(지점 선택 십자선 확정용). getCenter는 [lng,lat].
@@ -241,8 +327,6 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
       if (!shadowOverlayActive) {
         didInitialShadowRef.current = false;
         shadowGenerationRef.current += 1;
-        setShadows(EMPTY_SHADOWS);
-        return;
       }
       scheduleShadowUpdate(lastZoomRef.current);
     }, [shadowOverlayActive, scheduleShadowUpdate]);
@@ -568,44 +652,73 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
           )}
         </Map>
 
-        {BUILDINGS_PMTILES_URL ? (
-          <Pressable
-            accessibilityRole="switch"
-            accessibilityLabel={t("map.shadows.toggle")}
-            accessibilityState={{ checked: shadowsEnabled }}
-            onPress={() => setShadowsEnabled((enabled) => !enabled)}
-            className={
-              shadowsEnabled
-                ? "absolute bottom-40 left-5 h-11 flex-row items-center gap-2 rounded-full bg-secondary px-4 shadow-md active:bg-secondary-700"
-                : "absolute bottom-40 left-5 h-11 flex-row items-center gap-2 rounded-full bg-neutral-0 px-4 shadow-md active:bg-surface-muted"
-            }
-          >
-            <CloudSun
-              size={20}
-              color={
-                shadowsEnabled ? colors["neutral-0"] : colors["text-secondary"]
-              }
-            />
-            <Text
-              className={
-                shadowsEnabled
-                  ? "text-label-sm text-neutral-0"
-                  : "text-label-sm text-text-secondary"
-              }
-            >
-              {t(shadowsEnabled ? "map.shadows.on" : "map.shadows.off")}
-            </Text>
-          </Pressable>
-        ) : null}
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t("map.recenter")}
-          onPress={() => void recenter()}
-          className="absolute bottom-24 left-5 size-14 items-center justify-center rounded-full bg-neutral-0 shadow-md active:bg-surface-muted"
+        <View
+          pointerEvents="box-none"
+          className="absolute right-1 items-end gap-2"
+          style={{ top: insets.top + 64 }}
         >
-          <LocateFixed size={24} color={colors.text} />
-        </Pressable>
+          {BUILDINGS_PMTILES_URL ? (
+            <Animated.View
+              className="shadow-md"
+              style={{
+                height: 44,
+                borderRadius: 22,
+                width: shadowControlProgress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [44, 116],
+                }),
+              }}
+            >
+              <Pressable
+                accessibilityRole="switch"
+                accessibilityLabel={t("map.shadows.toggle")}
+                accessibilityState={{ checked: shadowsEnabled }}
+                onPress={toggleShadows}
+                className={
+                  shadowsEnabled
+                    ? "h-full w-full flex-row items-center overflow-hidden rounded-full bg-secondary px-3 active:bg-secondary-700"
+                    : "h-full w-full flex-row items-center overflow-hidden rounded-full bg-neutral-0 px-3 active:bg-surface-muted"
+                }
+              >
+                {shadowsEnabled ? (
+                  <CloudIcon color={colors["neutral-0"]} />
+                ) : (
+                  <SunHighIcon color={colors["text-secondary"]} />
+                )}
+                <Animated.View
+                  className="ml-2"
+                  style={{ opacity: shadowControlProgress }}
+                >
+                  <Text
+                    numberOfLines={1}
+                    className={
+                      shadowsEnabled
+                        ? "text-label-sm text-neutral-0"
+                        : "text-label-sm text-text-secondary"
+                    }
+                  >
+                    {t(shadowsEnabled ? "map.shadows.on" : "map.shadows.off")}
+                  </Text>
+                </Animated.View>
+              </Pressable>
+            </Animated.View>
+          ) : null}
+
+          <View
+            pointerEvents="box-none"
+            className="shadow-md"
+            style={{ width: 44, height: 44, borderRadius: 22 }}
+          >
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t("map.recenter")}
+              onPress={() => void recenter()}
+              className="h-full w-full items-center justify-center overflow-hidden rounded-full bg-neutral-0 active:bg-surface-muted"
+            >
+              <LocateFixed size={24} color={colors.text} />
+            </Pressable>
+          </View>
+        </View>
       </View>
     );
   },
