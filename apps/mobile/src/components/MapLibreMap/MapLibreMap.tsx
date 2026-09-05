@@ -1,10 +1,11 @@
 import { colors } from "@afterglow/tokens";
-import { buildShadows } from "@afterglow/utils";
+import { buildShadows, normalizeMapBounds } from "@afterglow/utils";
 import {
   Camera,
   type CameraRef,
   GeoJSONSource,
   Layer,
+  type LngLatBounds,
   Map,
   type MapRef,
   VectorSource,
@@ -162,26 +163,31 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
 
     // 현재 뷰포트 경계를 호출부에 보고한다(뷰포트 기반 장소 조회용).
     // getBounds는 LngLatBounds = [west, south, east, north] 형태를 준다.
-    const reportRegion = useCallback(async () => {
-      if (!onRegionChange) {
-        return;
-      }
-      const map = mapRef.current;
-      if (!map) {
-        return;
-      }
-      try {
-        const [west, south, east, north] = await map.getBounds();
-        onRegionChange({
-          swLng: west,
-          swLat: south,
-          neLng: east,
-          neLat: north,
-        });
-      } catch {
-        // 스타일 미로드 등 실패는 다음 이동에서 다시 시도되므로 무시.
-      }
-    }, [onRegionChange]);
+    const reportRegion = useCallback(
+      async (bounds?: LngLatBounds) => {
+        if (!onRegionChange) {
+          return;
+        }
+        try {
+          const nextBounds = bounds ?? (await mapRef.current?.getBounds());
+          if (!nextBounds) {
+            return;
+          }
+          const [west, south, east, north] = nextBounds;
+          onRegionChange(
+            normalizeMapBounds({
+              swLng: west,
+              swLat: south,
+              neLng: east,
+              neLat: north,
+            }),
+          );
+        } catch {
+          // 스타일 미로드 등 실패는 다음 이동에서 다시 시도되므로 무시.
+        }
+      },
+      [onRegionChange],
+    );
 
     // 마커를 개별 <Marker> 뷰 오버레이로 그리면 지점 수만큼 네이티브 View가 생기고
     // 지도를 움직일 때마다 전부 재배치돼 느리다(카테고리는 전체를 받아 수십~수백 건).
@@ -342,9 +348,9 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
           logo={false}
           onPress={onMapPress}
           // 이동/줌 종료 시 그림자 재계산 + 뷰포트 경계 보고
-          onRegionDidChange={() => {
+          onRegionDidChange={(event) => {
             void updateShadows();
-            void reportRegion();
+            void reportRegion(event.nativeEvent.bounds);
           }}
           // 최초 타일 렌더 완료 시 1회 계산(정지 상태에서도 그림자가 뜨도록) + 초기 뷰포트 보고
           onDidFinishRenderingMapFully={() => {
