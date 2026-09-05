@@ -30,8 +30,8 @@ import { useRecommendCourses } from "./hooks/use-recommend-courses";
 import { useTripPlanForm } from "./hooks/use-trip-plan-form";
 import { ResultStep } from "./ResultStep";
 
-const COLLAPSED_HEIGHT_RATIO = 0.48;
-const MIN_COLLAPSED_HEIGHT = 360;
+const COLLAPSED_HEIGHT_RATIO = 1 / 3;
+const MIN_COLLAPSED_HEIGHT = 280;
 const DRAG_THRESHOLD = 48;
 
 export interface TripPlanPanelProps {
