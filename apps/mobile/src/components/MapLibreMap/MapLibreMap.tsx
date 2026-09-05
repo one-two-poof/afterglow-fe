@@ -9,7 +9,7 @@ import {
   type MapRef,
   VectorSource,
 } from "@maplibre/maplibre-react-native";
-import { LocateFixed } from "lucide-react-native";
+import { CloudSun, LocateFixed } from "lucide-react-native";
 import {
   forwardRef,
   useCallback,
@@ -23,6 +23,7 @@ import {
   type NativeSyntheticEvent,
   Pressable,
   StyleSheet,
+  Text,
   View,
 } from "react-native";
 
@@ -81,6 +82,11 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
     const { t } = useI18n();
     const cameraRef = useRef<CameraRef>(null);
     const mapRef = useRef<MapRef>(null);
+    // 그림자 오버레이는 계산·브리지 비용이 크므로 사용자가 필요할 때만 켠다.
+    const [shadowsEnabled, setShadowsEnabled] = useState(false);
+    const shadowOverlayActive = Boolean(
+      BUILDINGS_PMTILES_URL && shadowsEnabled,
+    );
 
     // 지도 중앙 좌표를 호출부에 노출(지점 선택 십자선 확정용). getCenter는 [lng,lat].
     useImperativeHandle(
@@ -118,7 +124,7 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
     // 뷰포트의 건물을 조회해 그림자 폴리곤을 계산한다.
     const updateShadows = useCallback(async () => {
       // 건물 레이어가 없으면(건물 pmtiles 미설정) 그림자도 없다.
-      if (!BUILDINGS_PMTILES_URL) {
+      if (!shadowOverlayActive) {
         return;
       }
       const map = mapRef.current;
@@ -135,12 +141,24 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
             features,
             { lng: center[0], lat: center[1] },
             new Date(),
+            {
+              enabled: shadowOverlayActive,
+            },
           ),
         );
       } catch {
         // 쿼리 실패(스타일 미로드 등)는 다음 이동에서 다시 시도되므로 무시.
       }
-    }, []);
+    }, [shadowOverlayActive]);
+
+    useEffect(() => {
+      if (!shadowOverlayActive) {
+        didInitialShadowRef.current = false;
+        setShadows(EMPTY_SHADOWS);
+        return;
+      }
+      void updateShadows();
+    }, [shadowOverlayActive, updateShadows]);
 
     // 현재 뷰포트 경계를 호출부에 보고한다(뷰포트 기반 장소 조회용).
     // getBounds는 LngLatBounds = [west, south, east, north] 형태를 준다.
@@ -331,7 +349,7 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
           // 최초 타일 렌더 완료 시 1회 계산(정지 상태에서도 그림자가 뜨도록) + 초기 뷰포트 보고
           onDidFinishRenderingMapFully={() => {
             void reportRegion();
-            if (didInitialShadowRef.current) {
+            if (!shadowOverlayActive || didInitialShadowRef.current) {
               return;
             }
             didInitialShadowRef.current = true;
@@ -344,7 +362,7 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
           />
 
           {/* 그림자를 건물보다 먼저 선언 → 건물이 그림자 위에 그려진다. */}
-          {BUILDINGS_PMTILES_URL ? (
+          {shadowOverlayActive ? (
             <GeoJSONSource id="shadows" data={shadows}>
               <Layer
                 id="buildings-shadow"
@@ -357,7 +375,7 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
             </GeoJSONSource>
           ) : null}
 
-          {BUILDINGS_PMTILES_URL ? (
+          {shadowOverlayActive ? (
             <VectorSource
               id="buildings"
               url={`pmtiles://${BUILDINGS_PMTILES_URL}`}
@@ -436,6 +454,36 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
             </GeoJSONSource>
           )}
         </Map>
+
+        {BUILDINGS_PMTILES_URL ? (
+          <Pressable
+            accessibilityRole="switch"
+            accessibilityLabel={t("map.shadows.toggle")}
+            accessibilityState={{ checked: shadowsEnabled }}
+            onPress={() => setShadowsEnabled((enabled) => !enabled)}
+            className={
+              shadowsEnabled
+                ? "absolute bottom-40 left-5 h-11 flex-row items-center gap-2 rounded-full bg-secondary px-4 shadow-md active:bg-secondary-700"
+                : "absolute bottom-40 left-5 h-11 flex-row items-center gap-2 rounded-full bg-neutral-0 px-4 shadow-md active:bg-surface-muted"
+            }
+          >
+            <CloudSun
+              size={20}
+              color={
+                shadowsEnabled ? colors["neutral-0"] : colors["text-secondary"]
+              }
+            />
+            <Text
+              className={
+                shadowsEnabled
+                  ? "text-label-sm text-neutral-0"
+                  : "text-label-sm text-text-secondary"
+              }
+            >
+              {t(shadowsEnabled ? "map.shadows.on" : "map.shadows.off")}
+            </Text>
+          </Pressable>
+        ) : null}
 
         <Pressable
           accessibilityRole="button"
