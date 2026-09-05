@@ -38,7 +38,11 @@ import { getCurrentLocation } from "@/lib/location";
 import { ROUTE_COLORS } from "@/lib/route";
 import { useI18n } from "@/i18n/i18n-provider";
 
-import { type MapLibreMapProps, type MapLibreMapRef } from "./types";
+import {
+  type MapBounds,
+  type MapLibreMapProps,
+  type MapLibreMapRef,
+} from "./types";
 
 // OpenFreeMap: 무료 OSM 벡터 배경지도(웹과 동일). 등록·API 키 불필요.
 const BASEMAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
@@ -54,6 +58,14 @@ const BUILDINGS_SOURCE_LAYER = "buildings";
 // 그림자(그늘) 색 — 웹과 동일(디자인 토큰 secondary-900). 반투명으로 지면에 깔린다.
 const SHADOW_COLOR = "#1c2b45";
 const SHADOW_UPDATE_DELAY_MS = 200;
+
+type ShadowPerformanceSample = {
+  startedAt: number;
+  sourceFeatureCount: number;
+  shadowFeatureCount: number;
+  queryMs: number;
+  buildMs: number;
+};
 
 // 경로 지점 핀 색: 시작=보라, 도착=빨강 (경로 라인 파랑/초록과 겹치지 않게).
 const ROUTE_PIN_START = "#7c3aed";
@@ -130,6 +142,10 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
     const lastZoomRef = useRef(15);
     const shadowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const shadowGenerationRef = useRef(0);
+    const pendingShadowPerformanceRef = useRef<ShadowPerformanceSample | null>(
+      null,
+    );
+    const lastReportedBoundsRef = useRef<MapBounds | null>(null);
 
     // 뷰포트의 건물을 조회해 그림자 폴리곤을 계산한다.
     const updateShadows = useCallback(
@@ -144,24 +160,35 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
           return;
         }
         const generation = ++shadowGenerationRef.current;
+        const startedAt = performance.now();
         try {
           const [features, center] = await Promise.all([
             map.queryRenderedFeatures({ layers: ["buildings-fill"] }),
             map.getCenter(),
           ]);
+          const queriedAt = performance.now();
           if (generation !== shadowGenerationRef.current) {
             return;
           }
-          setShadows(
-            buildShadows(
-              features,
-              { lng: center[0], lat: center[1] },
-              new Date(),
-              {
-                enabled: shadowOverlayActive,
-              },
-            ),
+          const nextShadows = buildShadows(
+            features,
+            { lng: center[0], lat: center[1] },
+            new Date(),
+            {
+              enabled: shadowOverlayActive,
+            },
           );
+          const builtAt = performance.now();
+          if (__DEV__) {
+            pendingShadowPerformanceRef.current = {
+              startedAt,
+              sourceFeatureCount: features.length,
+              shadowFeatureCount: nextShadows.features.length,
+              queryMs: queriedAt - startedAt,
+              buildMs: builtAt - queriedAt,
+            };
+          }
+          setShadows(nextShadows);
         } catch {
           // 쿼리 실패(스타일 미로드 등)는 다음 이동에서 다시 시도되므로 무시.
         }
@@ -220,14 +247,23 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
             return;
           }
           const [west, south, east, north] = nextBounds;
-          onRegionChange(
-            normalizeMapBounds({
-              swLng: west,
-              swLat: south,
-              neLng: east,
-              neLat: north,
-            }),
-          );
+          const normalized = normalizeMapBounds({
+            swLng: west,
+            swLat: south,
+            neLng: east,
+            neLat: north,
+          });
+          const previous = lastReportedBoundsRef.current;
+          if (
+            previous?.swLng === normalized.swLng &&
+            previous.swLat === normalized.swLat &&
+            previous.neLng === normalized.neLng &&
+            previous.neLat === normalized.neLat
+          ) {
+            return;
+          }
+          lastReportedBoundsRef.current = normalized;
+          onRegionChange(normalized);
         } catch {
           // 스타일 미로드 등 실패는 다음 이동에서 다시 시도되므로 무시.
         }
@@ -401,6 +437,19 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
           // 최초 타일 렌더 완료 시 1회 계산(정지 상태에서도 그림자가 뜨도록) + 초기 뷰포트 보고
           onDidFinishRenderingMapFully={() => {
             void reportRegion();
+            if (__DEV__ && pendingShadowPerformanceRef.current) {
+              const sample = pendingShadowPerformanceRef.current;
+              pendingShadowPerformanceRef.current = null;
+              console.info("[map-perf] building shadows", {
+                sourceFeatures: sample.sourceFeatureCount,
+                shadowFeatures: sample.shadowFeatureCount,
+                queryMs: Number(sample.queryMs.toFixed(1)),
+                buildMs: Number(sample.buildMs.toFixed(1)),
+                totalUntilRenderedMs: Number(
+                  (performance.now() - sample.startedAt).toFixed(1),
+                ),
+              });
+            }
             if (!shadowOverlayActive || didInitialShadowRef.current) {
               return;
             }
