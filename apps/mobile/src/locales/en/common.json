@@ -88,6 +88,8 @@
   "plan.title.walk": "Walking preference",
   "plan.result.title": "Recommended trips",
   "plan.close": "Close",
+  "plan.expand": "Expand trip planner",
+  "plan.collapse": "Collapse trip planner",
   "plan.closeHome": "Close and return home",
   "plan.previousStep": "Previous step",
   "plan.result.complete": "You've reviewed all recommendations",

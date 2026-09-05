@@ -1,11 +1,14 @@
 import { useToastStore } from "@afterglow/stores";
 import { Button } from "@afterglow/ui-native";
-import { ArrowLeft } from "lucide-react-native";
-import { useCallback, useState } from "react";
+import { ArrowLeft, X } from "lucide-react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Animated,
+  BackHandler,
   Image,
   KeyboardAvoidingView,
-  Modal,
+  type LayoutChangeEvent,
+  PanResponder,
   Platform,
   Pressable,
   ScrollView,
@@ -26,6 +29,10 @@ import { type CourseMarker } from "@/types/recommendation";
 import { useRecommendCourses } from "./hooks/use-recommend-courses";
 import { useTripPlanForm } from "./hooks/use-trip-plan-form";
 import { ResultStep } from "./ResultStep";
+
+const COLLAPSED_HEIGHT_RATIO = 0.2;
+const MIN_COLLAPSED_HEIGHT = 180;
+const DRAG_THRESHOLD = 48;
 
 export interface TripPlanPanelProps {
   open: boolean;
@@ -51,6 +58,14 @@ export const TripPlanPanel = ({
 }: TripPlanPanelProps) => {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
+  const [sheetHeight, setSheetHeight] = useState(0);
+  const collapsedHeight = Math.min(
+    Math.max(sheetHeight * COLLAPSED_HEIGHT_RATIO, MIN_COLLAPSED_HEIGHT),
+    sheetHeight,
+  );
+  const collapsedOffset = Math.max(sheetHeight - collapsedHeight, 0);
+  const [expanded, setExpanded] = useState(true);
+  const [translateY] = useState(() => new Animated.Value(0));
   const { steps, reset: resetForm, buildPayload } = useTripPlanForm();
   const [step, setStep] = useState(0);
 
@@ -69,6 +84,58 @@ export const TripPlanPanel = ({
   const courseSelection = useCourseSelection();
 
   const showToast = useToastStore((s) => s.show);
+
+  const moveTo = useCallback(
+    (nextExpanded: boolean) => {
+      setExpanded(nextExpanded);
+      Animated.spring(translateY, {
+        toValue: nextExpanded ? 0 : collapsedOffset,
+        damping: 24,
+        stiffness: 240,
+        mass: 0.8,
+        useNativeDriver: true,
+      }).start();
+    },
+    [collapsedOffset, translateY],
+  );
+
+  useEffect(() => {
+    translateY.setValue(expanded ? 0 : collapsedOffset);
+  }, [collapsedOffset, expanded, translateY]);
+
+  const handleLayout = useCallback((event: LayoutChangeEvent) => {
+    setSheetHeight(event.nativeEvent.layout.height);
+  }, []);
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gesture) =>
+          Math.abs(gesture.dy) > 4 &&
+          Math.abs(gesture.dy) > Math.abs(gesture.dx),
+        onPanResponderGrant: () => translateY.stopAnimation(),
+        onPanResponderMove: (_, gesture) => {
+          const dragStartOffset = expanded ? 0 : collapsedOffset;
+          translateY.setValue(
+            Math.min(
+              collapsedOffset,
+              Math.max(0, dragStartOffset + gesture.dy),
+            ),
+          );
+        },
+        onPanResponderRelease: (_, gesture) => {
+          if (gesture.dy <= -DRAG_THRESHOLD || gesture.vy <= -0.5) {
+            moveTo(true);
+          } else if (gesture.dy >= DRAG_THRESHOLD || gesture.vy >= 0.5) {
+            moveTo(false);
+          } else {
+            moveTo(expanded);
+          }
+        },
+        onPanResponderTerminate: () => moveTo(expanded),
+      }),
+    [collapsedOffset, expanded, moveTo, translateY],
+  );
 
   // 닫아도 폼/추천/rank 상태는 보존한다(패널은 계속 마운트됨) → 다시 열면 이어서 진행.
   const handleClose = useCallback(() => {
@@ -91,7 +158,7 @@ export const TripPlanPanel = ({
   // 현재 결과 단계에서 보고 있는 코스 (모두 건너뛰면 undefined)
   const currentCourse = recommendations[rankIndex];
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     if (phase === "result") {
       // 결과 → 폼(마지막 단계)로 복귀
       setPhase("form");
@@ -102,7 +169,21 @@ export const TripPlanPanel = ({
     } else {
       setStep((prev) => prev - 1);
     }
-  };
+  }, [handleClose, isFirst, phase]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        handleBack();
+        return true;
+      },
+    );
+    return () => subscription.remove();
+  }, [handleBack, open]);
 
   const handleNext = () => {
     if (!isLast) {
@@ -151,59 +232,79 @@ export const TripPlanPanel = ({
   // 결과 단계: 이전 → 앞서 건너뛴 rank로 되돌아간다(0에서 멈춤).
   const handlePrev = () => setRankIndex((prev) => Math.max(0, prev - 1));
 
-  return (
-    <Modal
-      visible={open}
-      transparent
-      animationType="slide"
-      onRequestClose={handleBack}
-      statusBarTranslucent
-    >
-      <View style={{ flex: 1 }} className="justify-end">
-        {/* 배경(시트 위 영역) 탭 → 닫기 */}
-        <Pressable
-          accessibilityLabel={t("plan.close")}
-          onPress={handleClose}
-          style={[
-            StyleSheet.absoluteFill,
-            { backgroundColor: "rgba(0,0,0,0.4)" },
-          ]}
-        />
+  if (!open) {
+    return null;
+  }
 
-        {/* 시트는 모달 뷰포트를 채우고 내부 ScrollView만 스크롤한다. */}
+  return (
+    <View
+      pointerEvents="box-none"
+      style={[styles.panelLayer, { top: insets.top }]}
+      onLayout={handleLayout}
+      accessibilityViewIsModal={false}
+    >
+      <Animated.View
+        style={{
+          height: sheetHeight,
+          transform: [{ translateY }],
+        }}
+        className="absolute inset-x-0 bottom-0 overflow-hidden rounded-t-[20px] bg-bg shadow-md"
+      >
+        <View {...panResponder.panHandlers}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              expanded ? t("plan.collapse") : t("plan.expand")
+            }
+            accessibilityState={{ expanded }}
+            onPress={() => moveTo(!expanded)}
+            className="items-center pt-2 pb-1"
+          >
+            <View className="h-1 w-10 rounded-full bg-border" />
+          </Pressable>
+
+          <View className="flex-row items-center gap-2 px-4 py-3">
+            {phase === "result" ? null : (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={
+                  isFirst ? t("plan.closeHome") : t("plan.previousStep")
+                }
+                onPress={handleBack}
+                className="-ml-1 rounded-full p-1 active:bg-surface-muted"
+              >
+                <ArrowLeft size={22} />
+              </Pressable>
+            )}
+            <Text className="flex-1 text-heading-sm text-text">
+              {phase === "result" ? t("plan.result.title") : current.title}
+            </Text>
+            {me?.profileImageUrl ? (
+              <Image
+                source={{ uri: me.profileImageUrl }}
+                accessibilityIgnoresInvertColors
+                className="size-8 rounded-full border border-border"
+              />
+            ) : null}
+            {phase === "result" ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t("plan.close")}
+                onPress={handleClose}
+                hitSlop={8}
+                className="rounded-full p-1 active:bg-surface-muted"
+              >
+                <X size={20} />
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
-          className="flex-1 bg-bg"
-          style={{ paddingTop: insets.top }}
+          className="flex-1"
         >
           <SafeAreaView edges={["bottom"]} className="flex-1">
-            <View className="flex-row items-center gap-2 px-4 py-3">
-              {/* 추천 코스(결과) 화면에서는 뒤로가기 화살표를 숨긴다. */}
-              {phase === "result" ? null : (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    isFirst ? t("plan.closeHome") : t("plan.previousStep")
-                  }
-                  onPress={handleBack}
-                  className="-ml-1 rounded-full p-1 active:bg-surface-muted"
-                >
-                  <ArrowLeft size={22} />
-                </Pressable>
-              )}
-              <Text className="text-heading-sm text-text">
-                {phase === "result" ? t("plan.result.title") : current.title}
-              </Text>
-              {/* 로그인 사용자 프로필 이미지. 이미지가 없으면 표시하지 않는다. */}
-              {me?.profileImageUrl ? (
-                <Image
-                  source={{ uri: me.profileImageUrl }}
-                  accessibilityIgnoresInvertColors
-                  className="ml-auto size-8 rounded-full border border-border"
-                />
-              ) : null}
-            </View>
-
             <ScrollView
               className="flex-1 px-4"
               contentContainerClassName="pb-4"
@@ -317,12 +418,19 @@ export const TripPlanPanel = ({
             </View>
           </SafeAreaView>
         </KeyboardAvoidingView>
-      </View>
-    </Modal>
+      </Animated.View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  panelLayer: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    left: 0,
+    overflow: "hidden",
+  },
   equalActionButton: {
     flexBasis: 0,
     flexGrow: 1,
