@@ -10,10 +10,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import type { MarkerDetail } from "@/components/MapLibreMap/types";
 import { PlaceThumbnail } from "@/components/PlaceThumbnail";
@@ -39,12 +36,8 @@ export function PlaceDetailSheet({
 }: PlaceDetailSheetProps) {
   const { t } = useI18n();
   const { height: windowHeight } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
   const sheetHeight = Math.min(windowHeight * 0.58, 520);
-  const collapsedOffset = Math.max(
-    sheetHeight - COLLAPSED_CONTENT_HEIGHT - insets.bottom,
-    0,
-  );
+  const collapsedOffset = Math.max(sheetHeight - COLLAPSED_CONTENT_HEIGHT, 0);
   const translateY = useRef(
     new Animated.Value(expanded ? 0 : collapsedOffset),
   ).current;
@@ -128,7 +121,7 @@ export function PlaceDetailSheet({
       style={{ height: sheetHeight, transform: [{ translateY }] }}
       className="absolute inset-x-0 bottom-0 overflow-hidden rounded-t-[16px] bg-neutral-0 shadow-md"
     >
-      <SafeAreaView edges={["bottom"]} className="flex-1">
+      <SafeAreaView edges={expanded ? ["bottom"] : []} className="flex-1">
         <View {...panResponder.panHandlers}>
           <View className="items-center pt-2 pb-1">
             <View className="h-1 w-10 rounded-full bg-border" />
