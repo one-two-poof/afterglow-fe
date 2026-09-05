@@ -22,6 +22,10 @@ const FETCHERS: Record<
 // (뷰포트가 바뀌면 queryKey가 달라져 해당 영역을 새로 조회한다)
 const ONE_DAY_MS = 1000 * 60 * 60 * 24;
 
+// The category endpoints currently require a non-empty `name` parameter.
+// `%` is the backend's match-all value, so bounds remain the actual filter.
+const ALL_NAMES = "%";
+
 /**
  * 선택한 카테고리의 장소 목록을 조회한다 (웹 use-category-places와 동일).
  * category가 null("전체")이면 요청하지 않는다.
@@ -33,8 +37,8 @@ export const useCategoryPlaces = (
 ) =>
   useQuery({
     queryKey: ["places", "category", category, bounds ?? null],
-    queryFn: () => FETCHERS[category!](undefined, bounds ?? undefined),
-    enabled: category !== null,
+    queryFn: () => FETCHERS[category!](ALL_NAMES, bounds!),
+    enabled: category !== null && bounds != null,
     staleTime: ONE_DAY_MS,
     gcTime: ONE_DAY_MS,
   });
