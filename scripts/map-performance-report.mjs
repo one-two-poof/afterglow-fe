@@ -5,13 +5,25 @@ import { pathToFileURL } from "node:url";
 const LOG_MARKER = "[map-perf]";
 
 export function parseMapPerformanceLog(text) {
+  if (Buffer.isBuffer(text)) {
+    const isUtf16Le =
+      (text[0] === 0xff && text[1] === 0xfe) ||
+      (text.length > 1 && text[1] === 0x00);
+    text = text.subarray(isUtf16Le && text[0] === 0xff ? 2 : 0).toString(
+      isUtf16Le ? "utf16le" : "utf8",
+    );
+  }
   const records = [];
   for (const line of text.split(/\r?\n/)) {
     const markerIndex = line.indexOf(LOG_MARKER);
     if (markerIndex < 0) continue;
     const json = line.slice(markerIndex + LOG_MARKER.length).trim();
-    const record = JSON.parse(json);
-    if (record.event === "building_shadows_measured") records.push(record);
+    try {
+      const record = JSON.parse(json);
+      if (record.event === "building_shadows_measured") records.push(record);
+    } catch {
+      // DevTools probe 등 같은 marker를 쓴 비구조화 로그는 집계에서 제외한다.
+    }
   }
   return records;
 }
@@ -111,7 +123,7 @@ async function main() {
       const file = input.slice(separator + 1);
       return {
         label,
-        records: parseMapPerformanceLog(await readFile(file, "utf8")),
+        records: parseMapPerformanceLog(await readFile(file)),
       };
     }),
   );

@@ -10,6 +10,7 @@ import {
 test("parses only structured map performance records", () => {
   const records = parseMapPerformanceLog(`
 LOG unrelated message
+LOG [map-perf] probe
 LOG [map-perf] {"event":"building_shadows_measured","zoom":15,"queryMs":10,"buildMs":20,"totalUntilNextFrameMs":40,"sourceFeatures":100,"shadowFeatures":90}
 WARN ignored
 `);
@@ -17,6 +18,17 @@ WARN ignored
   assert.equal(records.length, 1);
   assert.equal(records[0].zoom, 15);
   assert.equal(records[0].totalUntilNextFrameMs, 40);
+});
+
+test("parses PowerShell Tee-Object UTF-16LE logs", () => {
+  const line =
+    '[map-perf] {"event":"building_shadows_measured","zoom":14,"queryMs":5,"buildMs":6,"totalUntilNextFrameMs":12,"sourceFeatures":10,"shadowFeatures":8}';
+  const utf16Log = Buffer.concat([
+    Buffer.from([0xff, 0xfe]),
+    Buffer.from(line, "utf16le"),
+  ]);
+
+  assert.equal(parseMapPerformanceLog(utf16Log).length, 1);
 });
 
 test("calculates nearest-rank percentiles", () => {
