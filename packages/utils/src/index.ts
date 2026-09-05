@@ -3,7 +3,7 @@ import { twMerge } from "tailwind-merge";
 
 export { toLatLng, type MapPoint, type LatLng } from "./geo";
 export { normalizeMapBounds, type GeographicBounds } from "./map-bounds";
-export { buildShadows } from "./shadows";
+export { buildShadows, MIN_SHADOW_ZOOM, shouldBuildShadows } from "./shadows";
 export * from "./date-utils";
 
 /**

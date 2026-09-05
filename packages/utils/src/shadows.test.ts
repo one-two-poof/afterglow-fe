@@ -1,6 +1,6 @@
 import type { Feature, Geometry, Polygon } from "geojson";
 
-import { buildShadows } from "./shadows";
+import { buildShadows, shouldBuildShadows } from "./shadows";
 
 // 서울시청 근처, 한 변 약 20m 정사각형 건물(높이 30m)
 const SEOUL = { lat: 37.5665, lng: 126.978 };
@@ -79,5 +79,13 @@ describe("buildShadows", () => {
     const shortReach = bounds(short.features[0]!).maxLng;
     const tallReach = bounds(tall.features[0]!).maxLng;
     expect(tallReach).toBeGreaterThan(shortReach);
+  });
+});
+
+describe("shouldBuildShadows", () => {
+  it("only enables expensive shadow work at the supported zoom", () => {
+    expect(shouldBuildShadows(true, 13.99)).toBe(false);
+    expect(shouldBuildShadows(true, 14)).toBe(true);
+    expect(shouldBuildShadows(false, 16)).toBe(false);
   });
 });

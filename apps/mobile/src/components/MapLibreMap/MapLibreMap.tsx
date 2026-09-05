@@ -1,5 +1,10 @@
 import { colors } from "@afterglow/tokens";
-import { buildShadows, normalizeMapBounds } from "@afterglow/utils";
+import {
+  buildShadows,
+  MIN_SHADOW_ZOOM,
+  normalizeMapBounds,
+  shouldBuildShadows,
+} from "@afterglow/utils";
 import {
   Camera,
   type CameraRef,
@@ -48,6 +53,7 @@ const BUILDINGS_SOURCE_LAYER = "buildings";
 
 // 그림자(그늘) 색 — 웹과 동일(디자인 토큰 secondary-900). 반투명으로 지면에 깔린다.
 const SHADOW_COLOR = "#1c2b45";
+const SHADOW_UPDATE_DELAY_MS = 200;
 
 // 경로 지점 핀 색: 시작=보라, 도착=빨강 (경로 라인 파랑/초록과 겹치지 않게).
 const ROUTE_PIN_START = "#7c3aed";
@@ -121,45 +127,85 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
       useState<GeoJSON.FeatureCollection>(EMPTY_SHADOWS);
     // 초기 1회(타일 최초 렌더 완료) 그림자를 계산했는지.
     const didInitialShadowRef = useRef(false);
+    const lastZoomRef = useRef(15);
+    const shadowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const shadowGenerationRef = useRef(0);
 
     // 뷰포트의 건물을 조회해 그림자 폴리곤을 계산한다.
-    const updateShadows = useCallback(async () => {
-      // 건물 레이어가 없으면(건물 pmtiles 미설정) 그림자도 없다.
-      if (!shadowOverlayActive) {
-        return;
-      }
-      const map = mapRef.current;
-      if (!map) {
-        return;
-      }
-      try {
-        const [features, center] = await Promise.all([
-          map.queryRenderedFeatures({ layers: ["buildings-fill"] }),
-          map.getCenter(),
-        ]);
-        setShadows(
-          buildShadows(
-            features,
-            { lng: center[0], lat: center[1] },
-            new Date(),
-            {
-              enabled: shadowOverlayActive,
-            },
-          ),
-        );
-      } catch {
-        // 쿼리 실패(스타일 미로드 등)는 다음 이동에서 다시 시도되므로 무시.
-      }
-    }, [shadowOverlayActive]);
+    const updateShadows = useCallback(
+      async (zoom: number) => {
+        // 건물 레이어가 없으면(건물 pmtiles 미설정) 그림자도 없다.
+        if (!shouldBuildShadows(shadowOverlayActive, zoom)) {
+          setShadows(EMPTY_SHADOWS);
+          return;
+        }
+        const map = mapRef.current;
+        if (!map) {
+          return;
+        }
+        const generation = ++shadowGenerationRef.current;
+        try {
+          const [features, center] = await Promise.all([
+            map.queryRenderedFeatures({ layers: ["buildings-fill"] }),
+            map.getCenter(),
+          ]);
+          if (generation !== shadowGenerationRef.current) {
+            return;
+          }
+          setShadows(
+            buildShadows(
+              features,
+              { lng: center[0], lat: center[1] },
+              new Date(),
+              {
+                enabled: shadowOverlayActive,
+              },
+            ),
+          );
+        } catch {
+          // 쿼리 실패(스타일 미로드 등)는 다음 이동에서 다시 시도되므로 무시.
+        }
+      },
+      [shadowOverlayActive],
+    );
+
+    const scheduleShadowUpdate = useCallback(
+      (zoom: number) => {
+        lastZoomRef.current = zoom;
+        if (shadowTimerRef.current) {
+          clearTimeout(shadowTimerRef.current);
+        }
+        if (!shouldBuildShadows(shadowOverlayActive, zoom)) {
+          shadowGenerationRef.current += 1;
+          setShadows(EMPTY_SHADOWS);
+          return;
+        }
+        shadowTimerRef.current = setTimeout(() => {
+          shadowTimerRef.current = null;
+          void updateShadows(zoom);
+        }, SHADOW_UPDATE_DELAY_MS);
+      },
+      [shadowOverlayActive, updateShadows],
+    );
 
     useEffect(() => {
       if (!shadowOverlayActive) {
         didInitialShadowRef.current = false;
+        shadowGenerationRef.current += 1;
         setShadows(EMPTY_SHADOWS);
         return;
       }
-      void updateShadows();
-    }, [shadowOverlayActive, updateShadows]);
+      scheduleShadowUpdate(lastZoomRef.current);
+    }, [shadowOverlayActive, scheduleShadowUpdate]);
+
+    useEffect(
+      () => () => {
+        if (shadowTimerRef.current) {
+          clearTimeout(shadowTimerRef.current);
+        }
+      },
+      [],
+    );
 
     // 현재 뷰포트 경계를 호출부에 보고한다(뷰포트 기반 장소 조회용).
     // getBounds는 LngLatBounds = [west, south, east, north] 형태를 준다.
@@ -349,7 +395,7 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
           onPress={onMapPress}
           // 이동/줌 종료 시 그림자 재계산 + 뷰포트 경계 보고
           onRegionDidChange={(event) => {
-            void updateShadows();
+            scheduleShadowUpdate(event.nativeEvent.zoom);
             void reportRegion(event.nativeEvent.bounds);
           }}
           // 최초 타일 렌더 완료 시 1회 계산(정지 상태에서도 그림자가 뜨도록) + 초기 뷰포트 보고
@@ -359,7 +405,7 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
               return;
             }
             didInitialShadowRef.current = true;
-            void updateShadows();
+            scheduleShadowUpdate(lastZoomRef.current);
           }}
         >
           <Camera
@@ -373,6 +419,7 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
               <Layer
                 id="buildings-shadow"
                 type="fill"
+                minzoom={MIN_SHADOW_ZOOM}
                 paint={{
                   "fill-color": SHADOW_COLOR,
                   "fill-opacity": 0.35,
@@ -385,10 +432,12 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
             <VectorSource
               id="buildings"
               url={`pmtiles://${BUILDINGS_PMTILES_URL}`}
+              minzoom={MIN_SHADOW_ZOOM}
             >
               <Layer
                 id="buildings-fill"
                 type="fill"
+                minzoom={MIN_SHADOW_ZOOM}
                 source-layer={BUILDINGS_SOURCE_LAYER}
                 paint={{
                   "fill-color": colors["neutral-600"],
