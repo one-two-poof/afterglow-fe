@@ -268,31 +268,26 @@ export const TripPlanPanel = ({
                   </View>
                 ) : (
                   // 모두 건너뛴 상태: 이전으로 되돌아가거나 닫는다.
-                  // 각 버튼을 flex-1 컨테이너로 감싸 영역을 정확히 반반으로 맞춘다
-                  // (Button 기본 너비 w-[320px] 영향 제거).
+                  // Button의 기본 너비를 직접 덮어쓰고 남은 영역을 정확히 반씩 나눈다.
                   <View className="flex-row gap-2">
                     {rankIndex > 0 ? (
-                      <View className="flex-1">
-                        <Button
-                          variant="secondary"
-                          size="lg"
-                          className="w-full"
-                          onPress={handlePrev}
-                        >
-                          {t("plan.previous")}
-                        </Button>
-                      </View>
-                    ) : null}
-                    <View className="flex-1">
                       <Button
-                        variant="primary"
+                        variant="secondary"
                         size="lg"
-                        className="w-full"
-                        onPress={handleFinish}
+                        style={styles.equalActionButton}
+                        onPress={handlePrev}
                       >
-                        {t("plan.close")}
+                        {t("plan.previous")}
                       </Button>
-                    </View>
+                    ) : null}
+                    <Button
+                      variant="primary"
+                      size="lg"
+                      style={styles.equalActionButton}
+                      onPress={handleFinish}
+                    >
+                      {t("plan.close")}
+                    </Button>
                   </View>
                 )
               ) : (
@@ -326,3 +321,11 @@ export const TripPlanPanel = ({
     </Modal>
   );
 };
+
+const styles = StyleSheet.create({
+  equalActionButton: {
+    flexBasis: 0,
+    flexGrow: 1,
+    width: 0,
+  },
+});
