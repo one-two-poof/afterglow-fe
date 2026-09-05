@@ -84,8 +84,8 @@ describe("buildShadows", () => {
 
 describe("shouldBuildShadows", () => {
   it("only enables expensive shadow work at the supported zoom", () => {
-    expect(shouldBuildShadows(true, 13.99)).toBe(false);
-    expect(shouldBuildShadows(true, 14)).toBe(true);
+    expect(shouldBuildShadows(true, 14.99)).toBe(false);
+    expect(shouldBuildShadows(true, 15)).toBe(true);
     expect(shouldBuildShadows(false, 16)).toBe(false);
   });
 });

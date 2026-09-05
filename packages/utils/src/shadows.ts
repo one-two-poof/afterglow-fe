@@ -24,7 +24,7 @@ const METERS_PER_DEG_LNG_EQ = 111320;
 const MIN_SUN_ALTITUDE_DEG = 3;
 // 저고도에서 그림자 길이가 폭주하는 것을 막는 상한(m)
 const MAX_SHADOW_M = 250;
-export const MIN_SHADOW_ZOOM = 14;
+export const MIN_SHADOW_ZOOM = 15;
 
 export function shouldBuildShadows(enabled: boolean, zoom: number): boolean {
   return enabled && zoom >= MIN_SHADOW_ZOOM;
