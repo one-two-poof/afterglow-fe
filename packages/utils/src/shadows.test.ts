@@ -1,11 +1,13 @@
 import type { Feature, Geometry, Polygon } from "geojson";
 
-import { buildShadows } from "./shadows";
+import { buildShadows, shouldBuildShadows } from "./shadows";
 
 // 서울시청 근처, 한 변 약 20m 정사각형 건물(높이 30m)
 const SEOUL = { lat: 37.5665, lng: 126.978 };
 const D = 0.0001; // 약 10m
-const squareBuilding = (height: number): { properties: Record<string, number>; geometry: Geometry } => ({
+const squareBuilding = (
+  height: number,
+): { properties: Record<string, number>; geometry: Geometry } => ({
   properties: { BLD_ID: 1, HEIGHT: height },
   geometry: {
     type: "Polygon",
@@ -34,6 +36,15 @@ const bounds = (f: Feature<Polygon>) => {
 };
 
 describe("buildShadows", () => {
+  it("returns no geometry when the shadow overlay is disabled", () => {
+    const afternoon = new Date("2026-08-13T15:00:00+09:00");
+    const fc = buildShadows([squareBuilding(30)], SEOUL, afternoon, {
+      enabled: false,
+    });
+
+    expect(fc.features).toHaveLength(0);
+  });
+
   it("오후(15시) 태양은 WSW → 그림자는 ENE(동+북)로 뻗는다", () => {
     const afternoon = new Date("2026-08-13T15:00:00+09:00");
     const fc = buildShadows([squareBuilding(30)], SEOUL, afternoon);
@@ -68,5 +79,13 @@ describe("buildShadows", () => {
     const shortReach = bounds(short.features[0]!).maxLng;
     const tallReach = bounds(tall.features[0]!).maxLng;
     expect(tallReach).toBeGreaterThan(shortReach);
+  });
+});
+
+describe("shouldBuildShadows", () => {
+  it("only enables expensive shadow work at the supported zoom", () => {
+    expect(shouldBuildShadows(true, 14.99)).toBe(false);
+    expect(shouldBuildShadows(true, 15)).toBe(true);
+    expect(shouldBuildShadows(false, 16)).toBe(false);
   });
 });

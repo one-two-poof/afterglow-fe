@@ -1,15 +1,21 @@
 import { colors } from "@afterglow/tokens";
-import { buildShadows } from "@afterglow/utils";
+import {
+  buildShadows,
+  MIN_SHADOW_ZOOM,
+  normalizeMapBounds,
+  shouldBuildShadows,
+} from "@afterglow/utils";
 import {
   Camera,
   type CameraRef,
   GeoJSONSource,
   Layer,
+  type LngLatBounds,
   Map,
   type MapRef,
   VectorSource,
 } from "@maplibre/maplibre-react-native";
-import { LocateFixed } from "lucide-react-native";
+import { CloudSun, LocateFixed } from "lucide-react-native";
 import {
   forwardRef,
   useCallback,
@@ -23,6 +29,7 @@ import {
   type NativeSyntheticEvent,
   Pressable,
   StyleSheet,
+  Text,
   View,
 } from "react-native";
 
@@ -31,7 +38,11 @@ import { getCurrentLocation } from "@/lib/location";
 import { ROUTE_COLORS } from "@/lib/route";
 import { useI18n } from "@/i18n/i18n-provider";
 
-import { type MapLibreMapProps, type MapLibreMapRef } from "./types";
+import {
+  type MapBounds,
+  type MapLibreMapProps,
+  type MapLibreMapRef,
+} from "./types";
 
 // OpenFreeMap: 무료 OSM 벡터 배경지도(웹과 동일). 등록·API 키 불필요.
 const BASEMAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
@@ -46,6 +57,17 @@ const BUILDINGS_SOURCE_LAYER = "buildings";
 
 // 그림자(그늘) 색 — 웹과 동일(디자인 토큰 secondary-900). 반투명으로 지면에 깔린다.
 const SHADOW_COLOR = "#1c2b45";
+const SHADOW_UPDATE_DELAY_MS = 200;
+const MAP_PERFORMANCE_LOG_MARKER = "[map-perf]";
+
+type ShadowPerformanceSample = {
+  startedAt: number;
+  zoom: number;
+  sourceFeatureCount: number;
+  shadowFeatureCount: number;
+  queryMs: number;
+  buildMs: number;
+};
 
 // 경로 지점 핀 색: 시작=보라, 도착=빨강 (경로 라인 파랑/초록과 겹치지 않게).
 const ROUTE_PIN_START = "#7c3aed";
@@ -81,6 +103,11 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
     const { t } = useI18n();
     const cameraRef = useRef<CameraRef>(null);
     const mapRef = useRef<MapRef>(null);
+    // 그림자 오버레이는 계산·브리지 비용이 크므로 사용자가 필요할 때만 켠다.
+    const [shadowsEnabled, setShadowsEnabled] = useState(false);
+    const shadowOverlayActive = Boolean(
+      BUILDINGS_PMTILES_URL && shadowsEnabled,
+    );
 
     // 지도 중앙 좌표를 호출부에 노출(지점 선택 십자선 확정용). getCenter는 [lng,lat].
     useImperativeHandle(
@@ -114,56 +141,157 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
       useState<GeoJSON.FeatureCollection>(EMPTY_SHADOWS);
     // 초기 1회(타일 최초 렌더 완료) 그림자를 계산했는지.
     const didInitialShadowRef = useRef(false);
+    const lastZoomRef = useRef(15);
+    const shadowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const shadowGenerationRef = useRef(0);
+    const lastReportedBoundsRef = useRef<MapBounds | null>(null);
 
     // 뷰포트의 건물을 조회해 그림자 폴리곤을 계산한다.
-    const updateShadows = useCallback(async () => {
-      // 건물 레이어가 없으면(건물 pmtiles 미설정) 그림자도 없다.
-      if (!BUILDINGS_PMTILES_URL) {
-        return;
-      }
-      const map = mapRef.current;
-      if (!map) {
-        return;
-      }
-      try {
-        const [features, center] = await Promise.all([
-          map.queryRenderedFeatures({ layers: ["buildings-fill"] }),
-          map.getCenter(),
-        ]);
-        setShadows(
-          buildShadows(
+    const updateShadows = useCallback(
+      async (zoom: number) => {
+        // 건물 레이어가 없으면(건물 pmtiles 미설정) 그림자도 없다.
+        if (!shouldBuildShadows(shadowOverlayActive, zoom)) {
+          setShadows(EMPTY_SHADOWS);
+          return;
+        }
+        const map = mapRef.current;
+        if (!map) {
+          return;
+        }
+        const generation = ++shadowGenerationRef.current;
+        const startedAt = performance.now();
+        try {
+          const [features, center] = await Promise.all([
+            map.queryRenderedFeatures({ layers: ["buildings-fill"] }),
+            map.getCenter(),
+          ]);
+          const queriedAt = performance.now();
+          if (generation !== shadowGenerationRef.current) {
+            return;
+          }
+          const nextShadows = buildShadows(
             features,
             { lng: center[0], lat: center[1] },
             new Date(),
-          ),
-        );
-      } catch {
-        // 쿼리 실패(스타일 미로드 등)는 다음 이동에서 다시 시도되므로 무시.
+            {
+              enabled: shadowOverlayActive,
+            },
+          );
+          const builtAt = performance.now();
+          setShadows(nextShadows);
+          if (__DEV__) {
+            const sample: ShadowPerformanceSample = {
+              startedAt,
+              zoom,
+              sourceFeatureCount: features.length,
+              shadowFeatureCount: nextShadows.features.length,
+              queryMs: queriedAt - startedAt,
+              buildMs: builtAt - queriedAt,
+            };
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                if (generation !== shadowGenerationRef.current) {
+                  return;
+                }
+                console.info(
+                  `${MAP_PERFORMANCE_LOG_MARKER} ${JSON.stringify({
+                    schemaVersion: 1,
+                    event: "building_shadows_measured",
+                    recordedAt: new Date().toISOString(),
+                    zoom: Number(sample.zoom.toFixed(1)),
+                    sourceFeatures: sample.sourceFeatureCount,
+                    shadowFeatures: sample.shadowFeatureCount,
+                    queryMs: Number(sample.queryMs.toFixed(1)),
+                    buildMs: Number(sample.buildMs.toFixed(1)),
+                    totalUntilNextFrameMs: Number(
+                      (performance.now() - sample.startedAt).toFixed(1),
+                    ),
+                  })}`,
+                );
+              });
+            });
+          }
+        } catch {
+          // 쿼리 실패(스타일 미로드 등)는 다음 이동에서 다시 시도되므로 무시.
+        }
+      },
+      [shadowOverlayActive],
+    );
+
+    const scheduleShadowUpdate = useCallback(
+      (zoom: number) => {
+        lastZoomRef.current = zoom;
+        if (shadowTimerRef.current) {
+          clearTimeout(shadowTimerRef.current);
+        }
+        if (!shouldBuildShadows(shadowOverlayActive, zoom)) {
+          shadowGenerationRef.current += 1;
+          setShadows(EMPTY_SHADOWS);
+          return;
+        }
+        shadowTimerRef.current = setTimeout(() => {
+          shadowTimerRef.current = null;
+          void updateShadows(zoom);
+        }, SHADOW_UPDATE_DELAY_MS);
+      },
+      [shadowOverlayActive, updateShadows],
+    );
+
+    useEffect(() => {
+      if (!shadowOverlayActive) {
+        didInitialShadowRef.current = false;
+        shadowGenerationRef.current += 1;
+        setShadows(EMPTY_SHADOWS);
+        return;
       }
-    }, []);
+      scheduleShadowUpdate(lastZoomRef.current);
+    }, [shadowOverlayActive, scheduleShadowUpdate]);
+
+    useEffect(
+      () => () => {
+        if (shadowTimerRef.current) {
+          clearTimeout(shadowTimerRef.current);
+        }
+      },
+      [],
+    );
 
     // 현재 뷰포트 경계를 호출부에 보고한다(뷰포트 기반 장소 조회용).
     // getBounds는 LngLatBounds = [west, south, east, north] 형태를 준다.
-    const reportRegion = useCallback(async () => {
-      if (!onRegionChange) {
-        return;
-      }
-      const map = mapRef.current;
-      if (!map) {
-        return;
-      }
-      try {
-        const [west, south, east, north] = await map.getBounds();
-        onRegionChange({
-          swLng: west,
-          swLat: south,
-          neLng: east,
-          neLat: north,
-        });
-      } catch {
-        // 스타일 미로드 등 실패는 다음 이동에서 다시 시도되므로 무시.
-      }
-    }, [onRegionChange]);
+    const reportRegion = useCallback(
+      async (bounds?: LngLatBounds) => {
+        if (!onRegionChange) {
+          return;
+        }
+        try {
+          const nextBounds = bounds ?? (await mapRef.current?.getBounds());
+          if (!nextBounds) {
+            return;
+          }
+          const [west, south, east, north] = nextBounds;
+          const normalized = normalizeMapBounds({
+            swLng: west,
+            swLat: south,
+            neLng: east,
+            neLat: north,
+          });
+          const previous = lastReportedBoundsRef.current;
+          if (
+            previous?.swLng === normalized.swLng &&
+            previous.swLat === normalized.swLat &&
+            previous.neLng === normalized.neLng &&
+            previous.neLat === normalized.neLat
+          ) {
+            return;
+          }
+          lastReportedBoundsRef.current = normalized;
+          onRegionChange(normalized);
+        } catch {
+          // 스타일 미로드 등 실패는 다음 이동에서 다시 시도되므로 무시.
+        }
+      },
+      [onRegionChange],
+    );
 
     // 마커를 개별 <Marker> 뷰 오버레이로 그리면 지점 수만큼 네이티브 View가 생기고
     // 지도를 움직일 때마다 전부 재배치돼 느리다(카테고리는 전체를 받아 수십~수백 건).
@@ -324,18 +452,18 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
           logo={false}
           onPress={onMapPress}
           // 이동/줌 종료 시 그림자 재계산 + 뷰포트 경계 보고
-          onRegionDidChange={() => {
-            void updateShadows();
-            void reportRegion();
+          onRegionDidChange={(event) => {
+            scheduleShadowUpdate(event.nativeEvent.zoom);
+            void reportRegion(event.nativeEvent.bounds);
           }}
           // 최초 타일 렌더 완료 시 1회 계산(정지 상태에서도 그림자가 뜨도록) + 초기 뷰포트 보고
           onDidFinishRenderingMapFully={() => {
             void reportRegion();
-            if (didInitialShadowRef.current) {
+            if (!shadowOverlayActive || didInitialShadowRef.current) {
               return;
             }
             didInitialShadowRef.current = true;
-            void updateShadows();
+            scheduleShadowUpdate(lastZoomRef.current);
           }}
         >
           <Camera
@@ -344,11 +472,12 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
           />
 
           {/* 그림자를 건물보다 먼저 선언 → 건물이 그림자 위에 그려진다. */}
-          {BUILDINGS_PMTILES_URL ? (
+          {shadowOverlayActive ? (
             <GeoJSONSource id="shadows" data={shadows}>
               <Layer
                 id="buildings-shadow"
                 type="fill"
+                minzoom={MIN_SHADOW_ZOOM}
                 paint={{
                   "fill-color": SHADOW_COLOR,
                   "fill-opacity": 0.35,
@@ -357,14 +486,16 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
             </GeoJSONSource>
           ) : null}
 
-          {BUILDINGS_PMTILES_URL ? (
+          {shadowOverlayActive ? (
             <VectorSource
               id="buildings"
               url={`pmtiles://${BUILDINGS_PMTILES_URL}`}
+              minzoom={MIN_SHADOW_ZOOM}
             >
               <Layer
                 id="buildings-fill"
                 type="fill"
+                minzoom={MIN_SHADOW_ZOOM}
                 source-layer={BUILDINGS_SOURCE_LAYER}
                 paint={{
                   "fill-color": colors["neutral-600"],
@@ -436,6 +567,36 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
             </GeoJSONSource>
           )}
         </Map>
+
+        {BUILDINGS_PMTILES_URL ? (
+          <Pressable
+            accessibilityRole="switch"
+            accessibilityLabel={t("map.shadows.toggle")}
+            accessibilityState={{ checked: shadowsEnabled }}
+            onPress={() => setShadowsEnabled((enabled) => !enabled)}
+            className={
+              shadowsEnabled
+                ? "absolute bottom-40 left-5 h-11 flex-row items-center gap-2 rounded-full bg-secondary px-4 shadow-md active:bg-secondary-700"
+                : "absolute bottom-40 left-5 h-11 flex-row items-center gap-2 rounded-full bg-neutral-0 px-4 shadow-md active:bg-surface-muted"
+            }
+          >
+            <CloudSun
+              size={20}
+              color={
+                shadowsEnabled ? colors["neutral-0"] : colors["text-secondary"]
+              }
+            />
+            <Text
+              className={
+                shadowsEnabled
+                  ? "text-label-sm text-neutral-0"
+                  : "text-label-sm text-text-secondary"
+              }
+            >
+              {t(shadowsEnabled ? "map.shadows.on" : "map.shadows.off")}
+            </Text>
+          </Pressable>
+        ) : null}
 
         <Pressable
           accessibilityRole="button"

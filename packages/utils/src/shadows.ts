@@ -24,6 +24,11 @@ const METERS_PER_DEG_LNG_EQ = 111320;
 const MIN_SUN_ALTITUDE_DEG = 3;
 // 저고도에서 그림자 길이가 폭주하는 것을 막는 상한(m)
 const MAX_SHADOW_M = 250;
+export const MIN_SHADOW_ZOOM = 15;
+
+export function shouldBuildShadows(enabled: boolean, zoom: number): boolean {
+  return enabled && zoom >= MIN_SHADOW_ZOOM;
+}
 
 type BuildingFeature = { properties: GeoJsonProperties; geometry: Geometry };
 
@@ -32,9 +37,7 @@ const cross = (o: Position, a: Position, b: Position): number =>
 
 /** Andrew monotone chain 볼록껍질. CCW 순서로 반환(닫히지 않음). */
 function convexHull(points: Position[]): Position[] {
-  const pts = points
-    .slice()
-    .sort((a, b) => a[0]! - b[0]! || a[1]! - b[1]!);
+  const pts = points.slice().sort((a, b) => a[0]! - b[0]! || a[1]! - b[1]!);
   if (pts.length < 3) {
     return pts;
   }
@@ -91,11 +94,16 @@ export function buildShadows(
   features: BuildingFeature[],
   center: { lat: number; lng: number },
   date: Date,
+  options: { enabled?: boolean } = {},
 ): FeatureCollection<Polygon> {
   const empty: FeatureCollection<Polygon> = {
     type: "FeatureCollection",
     features: [],
   };
+
+  if (options.enabled === false) {
+    return empty;
+  }
 
   const sun = SunCalc.getPosition(date, center.lat, center.lng);
   const altitudeDeg = sun.altitude;
@@ -134,9 +142,10 @@ export function buildShadows(
     const dLat = (length * shadowNorth) / METERS_PER_DEG_LAT;
 
     for (const ring of outerRings(f.geometry)) {
-      const translated = ring.map(
-        (pos): Position => [pos[0]! + dLng, pos[1]! + dLat],
-      );
+      const translated = ring.map((pos): Position => [
+        pos[0]! + dLng,
+        pos[1]! + dLat,
+      ]);
       const hull = convexHull([...ring, ...translated]);
       if (hull.length < 3) {
         continue;
