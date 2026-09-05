@@ -71,7 +71,7 @@ export interface MapLibreMapProps {
   routePins?: RoutePin[];
   /**
    * 지도 이동이 끝나(정착) 뷰포트가 바뀔 때, 그리고 최초 렌더 완료 시 호출.
-   * 현재 보이는 영역 경계를 넘겨 뷰포트 기반 장소 조회에 쓴다.
+   * 현재 보이는 영역 경계와 줌을 넘겨 뷰포트 기반 장소 조회에 쓴다.
    */
-  onRegionChange?: (bounds: MapBounds) => void;
+  onRegionChange?: (bounds: MapBounds, zoom: number) => void;
 }

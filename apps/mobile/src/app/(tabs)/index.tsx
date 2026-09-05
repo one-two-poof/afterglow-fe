@@ -16,6 +16,7 @@ import {
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  type ColorValue,
   Pressable,
   ScrollView,
   Text,
@@ -25,6 +26,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import Svg, { Path } from "react-native-svg";
 
 import { MapLibreMap } from "@/components/MapLibreMap";
 import { PlaceDefaultIcon } from "@/components/PlaceDefaultIcon";
@@ -67,6 +69,28 @@ const PLACE_CATEGORIES: PlaceCategory[] = [
 ];
 
 const EMPTY_PLACES: Place[] = [];
+const CATEGORY_MIN_ZOOM = 14;
+
+function MapRouteIcon({ color }: { color: ColorValue }) {
+  return (
+    <Svg
+      width={24}
+      height={24}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={1.25}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <Path d="M3 7l6 -3l6 3l6 -3v13l-6 3l-6 -3l-6 3v-13" />
+      <Path d="M9 12v.01" />
+      <Path d="M6 13v.01" />
+      <Path d="M17 15l-4 -4" />
+      <Path d="M13 15l4 -4" />
+    </Svg>
+  );
+}
 
 /** 경로 시작/도착 지점 좌표 */
 type LatLngPoint = { lat: number; lng: number };
@@ -111,8 +135,14 @@ export default function HomeScreen() {
   // 마커 클릭 시 하단에 띄울 상세. 마커 셋을 바꾸는 동작(검색/코스/카테고리 전환)에서 닫는다.
   const [detail, setDetail] = useState<MapMarker | null>(null);
   const [detailExpanded, setDetailExpanded] = useState(false);
-  // 현재 지도 뷰포트 경계. 지도 이동이 끝날 때마다 갱신되어 카테고리 장소를 그 영역으로 조회한다.
+  // 줌 14 이상일 때만 현재 뷰포트 경계를 유지해 카테고리 장소를 조회한다.
   const [viewport, setViewport] = useState<MapBounds | null>(null);
+  const [mapZoom, setMapZoom] = useState<number | null>(null);
+
+  const updateViewport = useCallback((bounds: MapBounds, zoom: number) => {
+    setMapZoom(zoom);
+    setViewport(zoom >= CATEGORY_MIN_ZOOM ? bounds : null);
+  }, []);
   // 경로 안내로 그린 경로(최단·그늘). 상세/마커가 바뀌면 지운다.
   const [routeLines, setRouteLines] = useState<RouteLine[]>([]);
   const [routing, setRouting] = useState(false);
@@ -265,6 +295,13 @@ export default function HomeScreen() {
 
   // 코스 태그 선택 시: 검색 마커를 지우고 그 코스로 전환. FILTER_ALL이면 해제.
   const selectFilter = (value: string) => {
+    if (
+      mapZoom !== null &&
+      mapZoom < CATEGORY_MIN_ZOOM &&
+      (PLACE_CATEGORIES as string[]).includes(value)
+    ) {
+      showToast(t("home.map.zoomIn"));
+    }
     setFilter(value);
     setSelectedPlace(null);
     setDetail(null);
@@ -425,7 +462,7 @@ export default function HomeScreen() {
         markers={markers}
         onMarkerPress={selectMarker}
         onMapPress={() => setPlaceDetailExpanded(false)}
-        onRegionChange={setViewport}
+        onRegionChange={updateViewport}
         // 카테고리는 뷰포트 기반 조회라 카메라 자동 이동 OFF(재조회 루프 방지).
         // 검색/코스/코스장소 마커는 해당 지점으로 이동해야 하므로 ON.
         autoFitMarkers={category === null}
@@ -560,7 +597,15 @@ export default function HomeScreen() {
               key={course.selectionId}
               value={String(course.selectionId)}
               className="h-10"
-              icon={<Text>📍</Text>}
+              icon={
+                <MapRouteIcon
+                  color={
+                    filter === String(course.selectionId)
+                      ? colors["neutral-0"]
+                      : colors.primary
+                  }
+                />
+              }
             >
               {courseTitle(course)}
             </TagList.Item>
