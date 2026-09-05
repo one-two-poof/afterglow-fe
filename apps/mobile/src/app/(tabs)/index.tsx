@@ -137,8 +137,10 @@ export default function HomeScreen() {
   const [detailExpanded, setDetailExpanded] = useState(false);
   // 줌 14 이상일 때만 현재 뷰포트 경계를 유지해 카테고리 장소를 조회한다.
   const [viewport, setViewport] = useState<MapBounds | null>(null);
+  const [mapZoom, setMapZoom] = useState<number | null>(null);
 
   const updateViewport = useCallback((bounds: MapBounds, zoom: number) => {
+    setMapZoom(zoom);
     setViewport(zoom >= CATEGORY_MIN_ZOOM ? bounds : null);
   }, []);
   // 경로 안내로 그린 경로(최단·그늘). 상세/마커가 바뀌면 지운다.
@@ -293,6 +295,13 @@ export default function HomeScreen() {
 
   // 코스 태그 선택 시: 검색 마커를 지우고 그 코스로 전환. FILTER_ALL이면 해제.
   const selectFilter = (value: string) => {
+    if (
+      mapZoom !== null &&
+      mapZoom < CATEGORY_MIN_ZOOM &&
+      (PLACE_CATEGORIES as string[]).includes(value)
+    ) {
+      showToast(t("home.map.zoomIn"));
+    }
     setFilter(value);
     setSelectedPlace(null);
     setDetail(null);

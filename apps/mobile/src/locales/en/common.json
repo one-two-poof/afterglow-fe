@@ -41,6 +41,7 @@
   "home.filter.hospital": "Hospitals",
   "home.filter.attraction": "Attractions",
   "home.filter.accommodation": "Stays",
+  "home.map.zoomIn": "Zoom in to see places on the map.",
   "home.plan.loginRequired": "Log in to get trip recommendations",
   "home.search.placeholder": "Search hospitals or attractions",
   "home.search.label": "Search places",

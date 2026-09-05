@@ -41,6 +41,7 @@
   "home.filter.hospital": "병원",
   "home.filter.attraction": "관광명소",
   "home.filter.accommodation": "숙소",
+  "home.map.zoomIn": "장소를 보려면 지도를 조금 더 확대해 주세요.",
   "home.plan.loginRequired": "로그인 후 코스를 추천받을 수 있어요",
   "home.search.placeholder": "병원 또는 관광지를 검색해보세요",
   "home.search.label": "장소 검색",

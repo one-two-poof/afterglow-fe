@@ -41,6 +41,7 @@
   "home.filter.hospital": "医院",
   "home.filter.attraction": "景点",
   "home.filter.accommodation": "住宿",
+  "home.map.zoomIn": "请放大地图以查看地点。",
   "home.plan.loginRequired": "登录后即可获取行程推荐",
   "home.search.placeholder": "搜索医院或景点",
   "home.search.label": "搜索地点",

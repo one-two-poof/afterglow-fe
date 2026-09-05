@@ -41,6 +41,7 @@
   "home.filter.hospital": "病院",
   "home.filter.attraction": "観光スポット",
   "home.filter.accommodation": "宿泊施設",
+  "home.map.zoomIn": "場所を表示するには、地図を拡大してください。",
   "home.plan.loginRequired": "ログインするとコースのおすすめを利用できます",
   "home.search.placeholder": "病院または観光スポットを検索",
   "home.search.label": "場所を検索",
