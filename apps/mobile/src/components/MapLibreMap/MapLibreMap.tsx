@@ -426,12 +426,8 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
       [routePins],
     );
 
-    // 확보한 현위치([lng, lat]). 최초 포커스 + 나침반 버튼에서 재사용. (웹의 userLocationRef 대응)
+    // 사용자가 요청해 확보한 현위치([lng, lat]). 나침반 버튼에서 재사용한다.
     const userLocationRef = useRef<[number, number] | null>(null);
-    // 마커(검색/코스)로 카메라를 이미 옮겼는지. 진입 시 현위치 확보가 늦게 끝나면
-    // 사용자가 검색으로 이동한 위치를 시뮬레이터 기본 위치(샌프란시스코) 등으로
-    // 덮어쓰는 문제가 있어, 마커가 카메라를 잡은 뒤엔 초기 현위치 이동을 건너뛴다.
-    const cameraLockedRef = useRef(false);
 
     // 마커(circle) 탭 → 인덱스로 원본 마커를 되찾아 상세를 호출부에 알린다.
     const handleMarkerPress = (
@@ -456,33 +452,12 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
       });
     };
 
-    // 진입 시 현위치를 확보해 중앙으로 이동 (거부/실패 시 기본값 유지). 웹 getCurrentPosition 대응.
-    useEffect(() => {
-      let cancelled = false;
-      getCurrentLocation().then((loc) => {
-        if (cancelled || !loc) {
-          return;
-        }
-        userLocationRef.current = loc;
-        // 그새 마커가 카메라를 잡았으면(사용자가 검색/코스로 이동) 덮어쓰지 않는다.
-        if (cameraLockedRef.current) {
-          return;
-        }
-        cameraRef.current?.flyTo({ center: loc, zoom: 15, duration: 600 });
-      });
-      return () => {
-        cancelled = true;
-      };
-    }, []);
-
     // markers가 바뀌면 그 지점들로 카메라 이동 (autoFitMarkers=false면 이동 안 함:
     // 뷰포트 기반 카테고리 조회에서 카메라 자동 이동 → 재조회 루프를 막는다)
     useEffect(() => {
       if (markers.length === 0 || !autoFitMarkers) {
         return;
       }
-      // 마커가 카메라를 잡았음을 표시 → 뒤늦게 도착한 초기 현위치 이동을 막는다.
-      cameraLockedRef.current = true;
       if (markers.length === 1) {
         const m = markers[0]!;
         cameraRef.current?.flyTo({
@@ -510,7 +485,6 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
       if (routeLines.length === 0) {
         return;
       }
-      cameraLockedRef.current = true;
       const coords = routeLines.flatMap((line) => line.coordinates);
       if (coords.length === 0) {
         return;
