@@ -88,6 +88,8 @@
   "plan.title.walk": "选择步行偏好",
   "plan.result.title": "推荐行程",
   "plan.close": "关闭",
+  "plan.expand": "展开行程规划",
+  "plan.collapse": "收起行程规划",
   "plan.closeHome": "关闭并返回首页",
   "plan.previousStep": "上一步",
   "plan.result.complete": "已查看全部推荐行程",

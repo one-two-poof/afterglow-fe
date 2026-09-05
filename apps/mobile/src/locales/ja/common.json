@@ -88,6 +88,8 @@
   "plan.title.walk": "徒歩の希望を選択",
   "plan.result.title": "おすすめコース",
   "plan.close": "閉じる",
+  "plan.expand": "旅行プラン画面を開く",
+  "plan.collapse": "旅行プラン画面を閉じる",
   "plan.closeHome": "閉じてホームへ",
   "plan.previousStep": "前のステップ",
   "plan.result.complete": "おすすめコースをすべて確認しました",
