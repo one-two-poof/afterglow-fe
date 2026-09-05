@@ -16,6 +16,7 @@ import {
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  type ColorValue,
   Pressable,
   ScrollView,
   Text,
@@ -25,6 +26,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import Svg, { Path } from "react-native-svg";
 
 import { MapLibreMap } from "@/components/MapLibreMap";
 import { PlaceDefaultIcon } from "@/components/PlaceDefaultIcon";
@@ -67,6 +69,27 @@ const PLACE_CATEGORIES: PlaceCategory[] = [
 ];
 
 const EMPTY_PLACES: Place[] = [];
+
+function MapRouteIcon({ color }: { color: ColorValue }) {
+  return (
+    <Svg
+      width={24}
+      height={24}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={1.25}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <Path d="M3 7l6 -3l6 3l6 -3v13l-6 3l-6 -3l-6 3v-13" />
+      <Path d="M9 12v.01" />
+      <Path d="M6 13v.01" />
+      <Path d="M17 15l-4 -4" />
+      <Path d="M13 15l4 -4" />
+    </Svg>
+  );
+}
 
 /** 경로 시작/도착 지점 좌표 */
 type LatLngPoint = { lat: number; lng: number };
@@ -560,7 +583,15 @@ export default function HomeScreen() {
               key={course.selectionId}
               value={String(course.selectionId)}
               className="h-10"
-              icon={<Text>📍</Text>}
+              icon={
+                <MapRouteIcon
+                  color={
+                    filter === String(course.selectionId)
+                      ? colors["neutral-0"]
+                      : colors.primary
+                  }
+                />
+              }
             >
               {courseTitle(course)}
             </TagList.Item>
