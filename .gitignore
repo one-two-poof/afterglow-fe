@@ -27,5 +27,6 @@ next-env.d.ts
 # logs
 npm-debug.log*
 pnpm-debug.log*
+artifacts/map-performance/
 
 /claude

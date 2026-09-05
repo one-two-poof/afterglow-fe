@@ -58,9 +58,11 @@ const BUILDINGS_SOURCE_LAYER = "buildings";
 // 그림자(그늘) 색 — 웹과 동일(디자인 토큰 secondary-900). 반투명으로 지면에 깔린다.
 const SHADOW_COLOR = "#1c2b45";
 const SHADOW_UPDATE_DELAY_MS = 200;
+const MAP_PERFORMANCE_LOG_MARKER = "[map-perf]";
 
 type ShadowPerformanceSample = {
   startedAt: number;
+  zoom: number;
   sourceFeatureCount: number;
   shadowFeatureCount: number;
   queryMs: number;
@@ -182,6 +184,7 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
           if (__DEV__) {
             pendingShadowPerformanceRef.current = {
               startedAt,
+              zoom,
               sourceFeatureCount: features.length,
               shadowFeatureCount: nextShadows.features.length,
               queryMs: queriedAt - startedAt,
@@ -440,15 +443,21 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
             if (__DEV__ && pendingShadowPerformanceRef.current) {
               const sample = pendingShadowPerformanceRef.current;
               pendingShadowPerformanceRef.current = null;
-              console.info("[map-perf] building shadows", {
-                sourceFeatures: sample.sourceFeatureCount,
-                shadowFeatures: sample.shadowFeatureCount,
-                queryMs: Number(sample.queryMs.toFixed(1)),
-                buildMs: Number(sample.buildMs.toFixed(1)),
-                totalUntilRenderedMs: Number(
-                  (performance.now() - sample.startedAt).toFixed(1),
-                ),
-              });
+              console.info(
+                `${MAP_PERFORMANCE_LOG_MARKER} ${JSON.stringify({
+                  schemaVersion: 1,
+                  event: "building_shadows_rendered",
+                  recordedAt: new Date().toISOString(),
+                  zoom: Number(sample.zoom.toFixed(1)),
+                  sourceFeatures: sample.sourceFeatureCount,
+                  shadowFeatures: sample.shadowFeatureCount,
+                  queryMs: Number(sample.queryMs.toFixed(1)),
+                  buildMs: Number(sample.buildMs.toFixed(1)),
+                  totalUntilRenderedMs: Number(
+                    (performance.now() - sample.startedAt).toFixed(1),
+                  ),
+                })}`,
+              );
             }
             if (!shadowOverlayActive || didInitialShadowRef.current) {
               return;

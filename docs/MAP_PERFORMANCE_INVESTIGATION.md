@@ -26,6 +26,42 @@
 
 개발 콘솔 표본에는 입력 건물 수, 생성된 그림자 수, 네이티브 피처 조회 시간, JS 그림자 계산 시간, 지도 렌더 완료까지의 총 시간이 기록된다. 같은 실제 기기에서 줌 14/15/16별로 5회 이상 이동한 중앙값을 비교한다. OFF 상태에서는 이 로그가 발생하지 않아야 한다.
 
+## 성능 로그 수집과 보고서 생성
+
+개발 빌드는 한 줄에 하나의 JSON 레코드를 출력한다. 정확한 위치 좌표는 포함하지 않는다.
+
+```text
+[map-perf] {"schemaVersion":1,"event":"building_shadows_rendered","recordedAt":"2026-09-05T08:00:00.000Z","zoom":15,"sourceFeatures":1240,"shadowFeatures":1187,"queryMs":86.4,"buildMs":41.2,"totalUntilRenderedMs":173.8}
+```
+
+PowerShell에서 Metro 로그를 파일로 함께 저장한다.
+
+```powershell
+New-Item -ItemType Directory -Force artifacts/map-performance
+pnpm --filter mobile dev 2>&1 | Tee-Object -FilePath artifacts/map-performance/optimized.log
+```
+
+그늘을 켠 뒤 줌 14, 15, 16에서 각각 같은 이동을 최소 10회 반복한다. 첫 회는 콜드 캐시 표본으로 별도 취급하거나 제외하고, 나머지는 웜 캐시끼리 비교한다. 이후 최적화 후보를 적용하기 전 로그를 `baseline.log`, 적용 후 로그를 `optimized.log`로 수집한다. 이번 변경 이전 코드에는 같은 구조화 계측이 없으므로 과거 버전과 비교하려면 기준 브랜치에도 동일한 계측만 별도로 이식하거나 Instruments 같은 외부 프로파일러를 사용해야 한다.
+
+두 로그에서 Markdown 보고서를 생성한다.
+
+```powershell
+pnpm perf:map:report -- `
+  --input "baseline=artifacts/map-performance/baseline.log" `
+  --input "optimized=artifacts/map-performance/optimized.log" `
+  --output "docs/performance/results/2026-09-05-iphone.md" `
+  --title "지도 성능 전후 비교" `
+  --device "iPhone 모델 / iOS 버전"
+```
+
+보고서는 시나리오·줌별 표본 수, 렌더 완료 총시간 p50/p95, 피처 조회 p50, 그림자 계산 p50, 평균 입력 건물·그림자 수를 만든다. 원시 로그 디렉터리는 Git에서 제외하고 생성된 Markdown 결과만 검토 후 커밋한다.
+
+집계기 단위 테스트는 다음 명령으로 실행한다.
+
+```powershell
+pnpm test:map-performance-report
+```
+
 ## 확인된 비용 경로
 
 지도 이동 종료마다 다음 작업이 한 번의 이벤트에서 연달아 실행된다.
