@@ -230,7 +230,9 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
     const lastZoomRef = useRef(15);
     const shadowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const shadowGenerationRef = useRef(0);
-    const lastReportedBoundsRef = useRef<MapBounds | null>(null);
+    const lastReportedRegionRef = useRef<
+      (MapBounds & { zoomBucket: number }) | null
+    >(null);
 
     // 뷰포트의 건물을 조회해 그림자 폴리곤을 계산한다.
     const updateShadows = useCallback(
@@ -343,13 +345,16 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
     // 현재 뷰포트 경계를 호출부에 보고한다(뷰포트 기반 장소 조회용).
     // getBounds는 LngLatBounds = [west, south, east, north] 형태를 준다.
     const reportRegion = useCallback(
-      async (bounds?: LngLatBounds) => {
+      async (bounds?: LngLatBounds, zoom?: number) => {
         if (!onRegionChange) {
           return;
         }
         try {
-          const nextBounds = bounds ?? (await mapRef.current?.getBounds());
-          if (!nextBounds) {
+          const [nextBounds, nextZoom] = await Promise.all([
+            bounds ?? mapRef.current?.getBounds(),
+            zoom ?? mapRef.current?.getZoom(),
+          ]);
+          if (!nextBounds || nextZoom == null) {
             return;
           }
           const [west, south, east, north] = nextBounds;
@@ -359,17 +364,19 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
             neLng: east,
             neLat: north,
           });
-          const previous = lastReportedBoundsRef.current;
+          const zoomBucket = Math.floor(nextZoom);
+          const previous = lastReportedRegionRef.current;
           if (
             previous?.swLng === normalized.swLng &&
             previous.swLat === normalized.swLat &&
             previous.neLng === normalized.neLng &&
-            previous.neLat === normalized.neLat
+            previous.neLat === normalized.neLat &&
+            previous.zoomBucket === zoomBucket
           ) {
             return;
           }
-          lastReportedBoundsRef.current = normalized;
-          onRegionChange(normalized);
+          lastReportedRegionRef.current = { ...normalized, zoomBucket };
+          onRegionChange(normalized, nextZoom);
         } catch {
           // 스타일 미로드 등 실패는 다음 이동에서 다시 시도되므로 무시.
         }
@@ -538,7 +545,10 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
           // 이동/줌 종료 시 그림자 재계산 + 뷰포트 경계 보고
           onRegionDidChange={(event) => {
             scheduleShadowUpdate(event.nativeEvent.zoom);
-            void reportRegion(event.nativeEvent.bounds);
+            void reportRegion(
+              event.nativeEvent.bounds,
+              event.nativeEvent.zoom,
+            );
           }}
           // 최초 타일 렌더 완료 시 1회 계산(정지 상태에서도 그림자가 뜨도록) + 초기 뷰포트 보고
           onDidFinishRenderingMapFully={() => {

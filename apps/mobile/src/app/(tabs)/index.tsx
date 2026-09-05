@@ -69,6 +69,7 @@ const PLACE_CATEGORIES: PlaceCategory[] = [
 ];
 
 const EMPTY_PLACES: Place[] = [];
+const CATEGORY_MIN_ZOOM = 14;
 
 function MapRouteIcon({ color }: { color: ColorValue }) {
   return (
@@ -134,8 +135,12 @@ export default function HomeScreen() {
   // 마커 클릭 시 하단에 띄울 상세. 마커 셋을 바꾸는 동작(검색/코스/카테고리 전환)에서 닫는다.
   const [detail, setDetail] = useState<MapMarker | null>(null);
   const [detailExpanded, setDetailExpanded] = useState(false);
-  // 현재 지도 뷰포트 경계. 지도 이동이 끝날 때마다 갱신되어 카테고리 장소를 그 영역으로 조회한다.
+  // 줌 14 이상일 때만 현재 뷰포트 경계를 유지해 카테고리 장소를 조회한다.
   const [viewport, setViewport] = useState<MapBounds | null>(null);
+
+  const updateViewport = useCallback((bounds: MapBounds, zoom: number) => {
+    setViewport(zoom >= CATEGORY_MIN_ZOOM ? bounds : null);
+  }, []);
   // 경로 안내로 그린 경로(최단·그늘). 상세/마커가 바뀌면 지운다.
   const [routeLines, setRouteLines] = useState<RouteLine[]>([]);
   const [routing, setRouting] = useState(false);
@@ -448,7 +453,7 @@ export default function HomeScreen() {
         markers={markers}
         onMarkerPress={selectMarker}
         onMapPress={() => setPlaceDetailExpanded(false)}
-        onRegionChange={setViewport}
+        onRegionChange={updateViewport}
         // 카테고리는 뷰포트 기반 조회라 카메라 자동 이동 OFF(재조회 루프 방지).
         // 검색/코스/코스장소 마커는 해당 지점으로 이동해야 하므로 ON.
         autoFitMarkers={category === null}
