@@ -638,25 +638,25 @@ export const MapLibreMap = forwardRef<MapLibreMapRef, MapLibreMapProps>(
             </GeoJSONSource>
           )}
 
-          {markersGeoJSON.features.length > 0 && (
-            <GeoJSONSource
-              id="place-markers"
-              data={markersGeoJSON}
-              onPress={handleMarkerPress}
-            >
-              <Layer
-                id="place-markers-circle"
-                type="circle"
-                minzoom={0}
-                paint={{
-                  "circle-radius": 6,
-                  "circle-color": colors.primary,
-                  "circle-stroke-width": 2,
-                  "circle-stroke-color": colors["neutral-0"],
-                }}
-              />
-            </GeoJSONSource>
-          )}
+          {/* 마커가 잠시 비어도(재조회 등) 소스를 언마운트하지 않고 data만 바꾼다.
+              조건부 렌더면 소스·레이어가 재생성되며 마커가 깜빡인다. */}
+          <GeoJSONSource
+            id="place-markers"
+            data={markersGeoJSON}
+            onPress={handleMarkerPress}
+          >
+            <Layer
+              id="place-markers-circle"
+              type="circle"
+              minzoom={0}
+              paint={{
+                "circle-radius": 6,
+                "circle-color": colors.primary,
+                "circle-stroke-width": 2,
+                "circle-stroke-color": colors["neutral-0"],
+              }}
+            />
+          </GeoJSONSource>
 
           {markers.map((marker, index) =>
             marker.color ? (
