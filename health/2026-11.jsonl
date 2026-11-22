@@ -226,3 +226,6 @@
 {"ts":"2026-11-22T01:13:22.766Z","id":"main-api","ok":false,"status":0,"ms":10001,"note":"2회 연속 실패: The operation was aborted due to timeout"}
 {"ts":"2026-11-22T01:13:22.766Z","id":"ml-api","ok":false,"status":0,"ms":10000,"note":"2회 연속 실패: The operation was aborted due to timeout"}
 {"ts":"2026-11-22T01:13:22.766Z","id":"buildings-pmtiles","ok":false,"status":0,"ms":10002,"note":"2회 연속 실패: The operation was aborted due to timeout"}
+{"ts":"2026-11-22T08:46:15.560Z","id":"main-api","ok":false,"status":0,"ms":10000,"note":"2회 연속 실패: The operation was aborted due to timeout"}
+{"ts":"2026-11-22T08:46:15.560Z","id":"ml-api","ok":false,"status":0,"ms":10000,"note":"2회 연속 실패: The operation was aborted due to timeout"}
+{"ts":"2026-11-22T08:46:15.560Z","id":"buildings-pmtiles","ok":false,"status":0,"ms":10001,"note":"2회 연속 실패: The operation was aborted due to timeout"}
